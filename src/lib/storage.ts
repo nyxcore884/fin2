@@ -4,29 +4,43 @@ import {
   ref,
   uploadBytesResumable,
   getDownloadURL,
-  StorageReference,
 } from 'firebase/storage';
-import { useStorage } from '@/firebase/provider';
-import { useUser } from '@/firebase';
+import { useStorage, useFirestore } from '@/firebase/provider';
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+
+export const createUploadSession = async (userId: string, sessionId: string) => {
+    const firestore = useFirestore();
+    const sessionRef = doc(firestore, 'upload_sessions', sessionId);
+    await setDoc(sessionRef, {
+        userId,
+        sessionId,
+        createdAt: serverTimestamp(),
+        status: 'uploading',
+        files: {}
+    });
+};
+
+export const markSessionAsReady = async (sessionId: string) => {
+    const firestore = useFirestore();
+    const sessionRef = doc(firestore, 'upload_sessions', sessionId);
+    await updateDoc(sessionRef, {
+        status: 'ready_for_processing',
+        readyAt: serverTimestamp()
+    });
+};
 
 export const useUploadFile = () => {
   const storage = useStorage();
-  const { user } = useUser();
+  const firestore = useFirestore();
 
   const uploadFile = (
-    fileType: string,
+    storagePath: string,
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<string> => {
-    if (!user) {
-      return Promise.reject('User not authenticated');
-    }
 
     try {
-      const fileRef: StorageReference = ref(
-        storage,
-        `${user.uid}/${fileType}/${file.name}`
-      );
+      const fileRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(fileRef, file);
 
       return new Promise((resolve, reject) => {
@@ -53,5 +67,16 @@ export const useUploadFile = () => {
     }
   };
 
-  return { uploadFile };
+  const updateSessionFiles = async (sessionId: string, fileType: string, fileName: string, storagePath: string) => {
+    const sessionRef = doc(firestore, 'upload_sessions', sessionId);
+    await updateDoc(sessionRef, {
+        [`files.${fileType}`]: {
+            name: fileName,
+            path: storagePath,
+            uploadedAt: serverTimestamp()
+        }
+    });
+  };
+
+  return { uploadFile, updateSessionFiles };
 };

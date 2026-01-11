@@ -6,20 +6,17 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Anyone can create an upload. Users can only read/update their own uploads.
-    // Admins can read all uploads.
-    match /uploads/{uploadId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow list: if request.auth != null; // Users can list their own uploads via query
+    // Users can create and update their own upload sessions.
+    // Cloud Functions can update any session.
+    match /upload_sessions/{sessionId} {
+      allow create, update: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
 
-    // Users can only read their own results.
-    // Admins can read all results.
+    // Admins can read all results. Users can read their own results.
+    // Cloud Functions can create results.
     match /budget_results/{resultId} {
-      // Allow creation from a Cloud Function by checking for a specific token or role if needed,
-      // for now, we allow any authenticated user to create a result, assuming it is handled by the function.
-      allow create: if request.auth != null;
+      allow create: if request.auth == null; // Allow from Cloud Functions
       allow read, delete: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow list: if request.auth != null; // Users can list their own results via query
     }

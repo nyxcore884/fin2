@@ -96,52 +96,51 @@
         "createdAt"
       ]
     },
-    "Upload": {
-      "title": "Upload",
+    "UploadSession": {
+      "title": "UploadSession",
       "type": "object",
-      "description": "Represents a file upload record and its processing status.",
+      "description": "Represents a file upload session and its processing status.",
       "properties": {
         "userId": {
           "type": "string",
-          "description": "The Firebase Auth UID of the user who uploaded the files."
+          "description": "The Firebase Auth UID of the user who initiated the session."
         },
-        "timestamp": {
+        "sessionId": {
+          "type": "string",
+          "description": "Unique ID for the upload session."
+        },
+        "createdAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Timestamp of when the upload was initiated."
+          "description": "Timestamp when the session was created."
         },
-        "files": {
-          "type": "object",
-          "description": "A map of filenames that were part of this upload.",
-          "properties": {
-            "glEntries": {
-              "type": "string"
-            },
-            "budgetHolderMapping": {
-              "type": "string"
-            },
-            "costItemMap": {
-              "type": "string"
-            },
-            "regionalMapping": {
-              "type": "string"
-            },
-            "corrections": {
-              "type": "string"
-            },
-            "revenueReport": {
-              "type": "string"
-            }
-          }
+        "readyAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when all files were uploaded and ready for processing."
         },
         "status": {
           "type": "string",
           "enum": [
+            "uploading",
+            "ready_for_processing",
             "processing",
             "completed",
             "error"
           ],
-          "description": "The processing status of the upload."
+          "description": "The processing status of the upload session."
+        },
+        "files": {
+          "type": "object",
+          "description": "Map of uploaded files and their details.",
+          "properties": {
+            "glEntries": { "$ref": "#/entities/FileDetails" },
+            "budgetHolderMapping": { "$ref": "#/entities/FileDetails" },
+            "costItemMap": { "$ref": "#/entities/FileDetails" },
+            "regionalMapping": { "$ref": "#/entities/FileDetails" },
+            "corrections": { "$ref": "#/entities/FileDetails" },
+            "revenueReport": { "$ref": "#/entities/FileDetails" }
+          }
         },
         "errorMessage": {
           "type": "string",
@@ -152,12 +151,17 @@
           "description": "The ID of the corresponding document in the budget_results collection."
         }
       },
-      "required": [
-        "userId",
-        "timestamp",
-        "files",
-        "status"
-      ]
+      "required": ["userId", "sessionId", "createdAt", "status", "files"]
+    },
+    "FileDetails": {
+      "title": "FileDetails",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "path", "uploadedAt"]
     }
   },
   "auth": {
@@ -177,12 +181,12 @@
         }
       },
       {
-        "path": "/uploads/{uploadId}",
+        "path": "/upload_sessions/{sessionId}",
         "definition": {
           "schema": {
-            "$ref": "#/entities/Upload"
+            "$ref": "#/entities/UploadSession"
           },
-          "description": "A log of every file upload attempt, tracking its status and associated files."
+          "description": "Tracks the state and metadata of a multi-file upload job."
         }
       },
       {
