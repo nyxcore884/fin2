@@ -1,9 +1,8 @@
 'use server';
 
 import * as admin from 'firebase-admin';
-import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onDocumentUpdate } from '@genkit-ai/firebase/functions';
 import { ai } from '@/ai/genkit';
-import { firebase } from '@genkit-ai/firebase';
 import { processUploadedFiles } from '../processors/dataProcessor';
 import { analyzeWithAI } from '../processors/aiProcessor';
 
@@ -16,7 +15,7 @@ export const processBudgetData = ai.defineFlow(
     {
         name: 'processBudgetData',
         triggers: [
-            firebase.onDocumentUpdate(
+            onDocumentUpdate(
                 'upload_sessions/{sessionId}',
             ),
         ],
