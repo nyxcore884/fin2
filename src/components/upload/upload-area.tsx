@@ -10,7 +10,7 @@ import { MOCK_UPLOAD_FILES } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Terminal } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/firebase';
 
 type FileInfo = {
   id: string;

@@ -5,7 +5,7 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from 'firebase/storage';
-import { useStorage, useFirestore } from '@/firebase/provider';
+import { useStorage, useFirestore } from '@/firebase/firebase';
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export const createUploadSession = async (firestore: any, userId: string, sessionId: string) => {

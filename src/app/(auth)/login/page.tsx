@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons/logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChromeIcon, Loader } from 'lucide-react';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useUser } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -26,12 +25,9 @@ export default function LoginPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      // Use signInWithPopup to avoid redirect issues in some dev environments
       await signInWithPopup(auth, provider);
-      // The onAuthStateChanged listener will handle the redirect to /dashboard
     } catch (error) {
       console.error("Error during Google sign-in:", error);
-      // Optionally, show a toast notification to the user
     }
   };
   

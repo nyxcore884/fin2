@@ -15,7 +15,7 @@ import { LogOut, User, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser } from '@/firebase/firebase';
 import { Skeleton } from '../ui/skeleton';
 
 export function UserNav() {
