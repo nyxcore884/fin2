@@ -4,11 +4,24 @@ import {
   ref,
   uploadBytesResumable,
   getDownloadURL,
+  getStorage,
 } from 'firebase/storage';
-import { useStorage, useFirestore } from '@/firebase/firebase';
-import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
-export const createUploadSession = async (firestore: any, userId: string, sessionId: string) => {
+let firebaseApp;
+if (getApps().length === 0) {
+  firebaseApp = initializeApp(firebaseConfig);
+} else {
+  firebaseApp = getApp();
+}
+
+const storage = getStorage(firebaseApp);
+const firestore = getFirestore(firebaseApp);
+
+
+export const createUploadSession = async (userId: string, sessionId: string) => {
     const sessionRef = doc(firestore, 'upload_sessions', sessionId);
     await setDoc(sessionRef, {
         userId,
@@ -19,7 +32,7 @@ export const createUploadSession = async (firestore: any, userId: string, sessio
     });
 };
 
-export const markSessionAsReady = async (firestore: any, sessionId:string) => {
+export const markSessionAsReady = async (sessionId:string) => {
     const sessionRef = doc(firestore, 'upload_sessions', sessionId);
     await updateDoc(sessionRef, {
         status: 'ready_for_processing',
@@ -28,19 +41,12 @@ export const markSessionAsReady = async (firestore: any, sessionId:string) => {
 };
 
 export const useUploadFile = () => {
-  const storage = useStorage();
-  const firestore = useFirestore();
-
   const uploadFile = (
     storagePath: string,
     file: File,
     onProgress?: (progress: number) => void
   ): Promise<string> => {
 
-    if (!storage) {
-        return Promise.reject(new Error("Firebase Storage is not available."));
-    }
-      
     try {
       const fileRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(fileRef, file);
@@ -70,9 +76,6 @@ export const useUploadFile = () => {
   };
 
   const updateSessionFiles = async (sessionId: string, fileType: string, fileName: string, storagePath: string) => {
-    if (!firestore) {
-        throw new Error("Firestore is not available.");
-    }
     const sessionRef = doc(firestore, 'upload_sessions', sessionId);
     await updateDoc(sessionRef, {
         [`files.${fileType}`]: {
@@ -83,5 +86,5 @@ export const useUploadFile = () => {
     });
   };
 
-  return { uploadFile, updateSessionFiles, createUploadSession: (userId: string, sessionId: string) => createUploadSession(firestore, userId, sessionId), markSessionAsReady: (sessionId: string) => markSessionAsReady(firestore, sessionId) };
+  return { uploadFile, updateSessionFiles, createUploadSession, markSessionAsReady };
 };

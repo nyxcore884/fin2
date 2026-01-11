@@ -1,5 +1,5 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { UserNav } from "@/components/auth/user-nav";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export function Header() {
   return (
@@ -10,7 +10,7 @@ export function Header() {
       <div className="flex-1">
         {/* Placeholder for breadcrumbs or page title if needed */}
       </div>
-      <UserNav />
+      <ThemeToggle />
     </header>
   );
 }

@@ -10,7 +10,6 @@ import { MOCK_UPLOAD_FILES } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Terminal } from 'lucide-react';
-import { useUser } from '@/firebase/firebase';
 
 type FileInfo = {
   id: string;
@@ -34,7 +33,6 @@ export function UploadArea() {
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const { user } = useUser();
   const { uploadFile, createUploadSession, updateSessionFiles, markSessionAsReady } = useUploadFile();
   const { toast } = useToast();
 
@@ -57,11 +55,7 @@ export function UploadArea() {
   };
 
   const handleProcessFiles = async () => {
-    if (!user) {
-      toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be signed in to upload files.' });
-      return;
-    }
-
+    const userId = "anonymous_user"; // Since auth is removed
     setIsProcessing(true);
     const newSessionId = uuidv4();
 
@@ -77,13 +71,13 @@ export function UploadArea() {
 
     try {
       // 1. Create the session document in Firestore
-      await createUploadSession(user.uid, newSessionId);
+      await createUploadSession(userId, newSessionId);
       toast({ title: "Upload Session Created", description: `Session ID: ${newSessionId}` });
 
       // 2. Upload all files in parallel
       const uploadPromises = filesToUpload.map(({ id, file }) => {
         setFilesState(prev => ({ ...prev, [id]: { ...prev[id], uploadState: 'loading', progress: 0 } }));
-        const storagePath = `user_uploads/${user.uid}/${newSessionId}/${id}/${file.name}`;
+        const storagePath = `user_uploads/${userId}/${newSessionId}/${id}/${file.name}`;
         
         return uploadFile(storagePath, file, (progress) => {
           setFilesState(prev => ({ ...prev, [id]: { ...prev[id], progress } }));
