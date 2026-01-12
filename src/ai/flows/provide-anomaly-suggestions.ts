@@ -13,7 +13,11 @@ import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (admin.apps.length === 0) {
-    admin.initializeApp();
+    try {
+      admin.initializeApp();
+    } catch (e) {
+      console.error('Firebase admin initialization error', e);
+    }
 }
 
 const AnomalySuggestionInputSchema = z.object({

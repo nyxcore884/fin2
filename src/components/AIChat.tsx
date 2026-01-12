@@ -5,6 +5,7 @@ import { useChat } from '@/hooks/useChat';
 import MessageList from './MessageList';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { X } from 'lucide-react';
 
 interface AIChatProps {
   onClose: () => void;
@@ -12,42 +13,41 @@ interface AIChatProps {
 }
 
 export default function AIChat({ onClose, currentSessionId }: AIChatProps) {
-  const { messages, sendMessage, isLoading, setInputMessage } = useChat({ currentSessionId });
-  const [localMessage, setLocalMessage] = useState('');
+  const { messages, sendMessage, isLoading, inputMessage, setInputMessage } = useChat({ currentSessionId });
 
   const handleSendMessage = () => {
-    if (localMessage.trim()) {
-      sendMessage(localMessage);
-      setLocalMessage('');
+    if (inputMessage.trim()) {
+      sendMessage(inputMessage);
+      setInputMessage('');
     }
   };
 
   const handleQuickAction = (text: string) => {
-    setLocalMessage(text);
+    setInputMessage(text);
     sendMessage(text);
-    setLocalMessage('');
+    setInputMessage('');
   };
 
   return (
     <div className="flex flex-col h-full bg-background border border-primary rounded-lg">
       <div className="flex items-center justify-between p-4 border-b border-primary">
         <h3 className="text-lg font-semibold text-foreground">AI Financial Assistant</h3>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="text-muted-foreground hover:text-foreground"
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
+          <X className="h-4 w-4" />
+        </Button>
       </div>
       <MessageList messages={messages} isLoading={isLoading} />
       <div className="p-4 border-t border-border">
         <div className="flex space-x-2">
           <Input
             type="text"
-            value={localMessage}
-            onChange={(e) => setLocalMessage(e.target.value)}
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Ask about your financial data..."
             className="flex-1"
             disabled={isLoading}
@@ -55,7 +55,7 @@ export default function AIChat({ onClose, currentSessionId }: AIChatProps) {
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!localMessage.trim() || isLoading}
+            disabled={!inputMessage.trim() || isLoading}
           >
             Send
           </Button>

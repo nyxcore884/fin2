@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import AIChat from './AIChat';
+import { Button } from './ui/button';
+import { MessageSquare, Bot } from 'lucide-react';
 
 interface FloatingAIChatProps {
   currentSessionId?: string;
@@ -13,18 +15,17 @@ export default function FloatingAIChat({ currentSessionId }: FloatingAIChatProps
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-96 h-[32rem] bg-background border border-primary rounded-lg shadow-lg">
+        <div className="absolute bottom-16 right-0 w-[28rem] h-[36rem] bg-background rounded-lg shadow-2xl border-2 border-primary/50">
           <AIChat onClose={() => setIsOpen(false)} currentSessionId={currentSessionId} />
         </div>
       )}
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center shadow-lg hover:shadow-glow-primary transition-all duration-300"
+        className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg hover:shadow-glow-primary transition-all duration-300 transform hover:scale-110"
+        aria-label="Toggle AI Chat"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      </button>
+        <Bot className="h-8 w-8 text-primary-foreground" />
+      </Button>
     </div>
   );
 }

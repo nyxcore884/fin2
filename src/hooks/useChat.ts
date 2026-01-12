@@ -22,6 +22,7 @@ export function useChat({ currentSessionId }: UseChatProps = {}) {
     setMessages(prev => [...prev, userMessage]);
     
     try {
+      // Since we removed auth, we use a placeholder user ID.
       // In a real app with auth, you'd get the real user ID.
       const userId = 'anonymous_user'; 
 
