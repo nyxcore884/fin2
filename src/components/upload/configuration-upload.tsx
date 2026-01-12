@@ -99,8 +99,9 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
         setActiveFile(label);
         const storagePath = `user_uploads/${userId}/${newSessionId}/${id}/${file.name}`;
         
+        // This logic is tricky for multiple files. A simple average is used here.
         await uploadFile(storagePath, file, (fileProgress) => {
-            const overallProgress = (index / filesToUpload.length) * 100 + (fileProgress / filesToUpload.length);
+            const overallProgress = ((index + (fileProgress / 100)) / filesToUpload.length) * 100;
             setProgress(Math.round(overallProgress));
         });
         
