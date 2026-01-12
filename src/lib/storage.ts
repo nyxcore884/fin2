@@ -49,6 +49,7 @@ export const useUploadFile = () => {
   ): Promise<string> => {
 
     try {
+      console.log('Starting upload to:', storagePath);
       const fileRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(fileRef, file);
 
@@ -58,20 +59,22 @@ export const useUploadFile = () => {
           (snapshot) => {
             const progress =
               (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log('Upload progress:', progress);
             onProgress?.(Math.round(progress));
           },
           (error) => {
-            console.error('Upload failed:', error);
+            console.error('Upload error:', error);
             reject(error);
           },
           async () => {
+            console.log('Upload completed');
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             resolve(downloadURL);
           }
         );
       });
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('Error in uploadFile:', error);
       return Promise.reject(error);
     }
   };
