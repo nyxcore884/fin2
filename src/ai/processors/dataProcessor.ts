@@ -1,7 +1,7 @@
 import { Storage } from '@google-cloud/storage';
 import csv from 'csv-parser';
 import * as XLSX from 'xlsx';
-import { createReadStream, readFileSync } from 'fs';
+import { createReadStream, readFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import pdf from 'pdf-parse';
@@ -57,19 +57,33 @@ const downloadAndParseFiles = async (files: any) => {
     const info = fileInfo as { name: string; path: string };
     if (!info || !info.path) continue;
 
-    const filePath = info.path;
     const tempFilePath = join(tmpdir(), info.name);
 
-    // Download file to temporary location
-    await bucket.file(filePath).download({ destination: tempFilePath });
+    try {
+        const filePath = info.path;
+        
+        // Download file to temporary location
+        await bucket.file(filePath).download({ destination: tempFilePath });
 
-    // Parse based on file type
-    if (filePath.endsWith('.csv')) {
-      fileData[fileType] = await parseCSV(tempFilePath);
-    } else if (filePath.endsWith('.xlsx') || filePath.endsWith('.xls')) {
-      fileData[fileType] = parseExcel(tempFilePath);
-    } else if (filePath.endsWith('.pdf')) {
-        fileData[fileType] = await parsePDF(tempFilePath);
+        // Parse based on file type
+        if (filePath.endsWith('.csv')) {
+            fileData[fileType] = await parseCSV(tempFilePath);
+        } else if (filePath.endsWith('.xlsx') || filePath.endsWith('.xls')) {
+            fileData[fileType] = parseExcel(tempFilePath);
+        } else if (filePath.endsWith('.pdf')) {
+            fileData[fileType] = await parsePDF(tempFilePath);
+        }
+
+    } catch (error: any) {
+        console.error(`Error processing file ${fileType} (${info.path}):`, error);
+        throw new Error(`Failed to download or parse ${info.name}. Reason: ${error.message}`);
+    } finally {
+        // Clean up the temporary file
+        try {
+            unlinkSync(tempFilePath);
+        } catch (cleanupError) {
+            console.warn(`Failed to clean up temporary file ${tempFilePath}:`, cleanupError);
+        }
     }
   }
 
@@ -181,19 +195,19 @@ const applyMappings = (fileData: any): ProcessedData => {
     .map(([name, amount]) => ({
       name,
       amount,
-      percentage: ((amount / totalCostsVerified) * 100).toFixed(2) + '%'
+      percentage: totalCostsVerified > 0 ? ((amount / totalCostsVerified) * 100).toFixed(2) + '%' : '0.00%'
     }));
 
   const regionalDistribution = Object.entries(result.costsByRegion).map(([region, amount]) => ({
     region,
     amount,
-    percentage: ((amount / totalCostsVerified) * 100).toFixed(2) + '%'
+    percentage: totalCostsVerified > 0 ? ((amount / totalCostsVerified) * 100).toFixed(2) + '%' : '0.00%'
   }));
   
   const holderDistribution = Object.entries(result.costsByHolder).map(([holder, amount]) => ({
       holder,
       amount,
-      percentage: ((amount / totalCostsVerified) * 100).toFixed(2) + '%'
+      percentage: totalCostsVerified > 0 ? ((amount / totalCostsVerified) * 100).toFixed(2) + '%' : '0.00%'
   }));
 
   const verifiedMetrics = {

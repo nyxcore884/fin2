@@ -1,8 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ProcessedData } from './dataProcessor';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
 export interface AIAnalysis {
   anomalies: string[];
   insights: string[];
@@ -14,8 +12,11 @@ export interface AIResult {
   aiAnalysis: AIAnalysis;
 }
 
-export const analyzeWithAI = async (data: ProcessedData): Promise<AIResult> => {
+// The API key is now passed as a parameter for better modularity and security.
+export const analyzeWithAI = async (data: ProcessedData, apiKey: string): Promise<AIResult> => {
   try {
+    // Initialize with the provided API key
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-pro',
       generationConfig: {

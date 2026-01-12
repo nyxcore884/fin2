@@ -54,7 +54,12 @@ const processBudgetDataFlow = ai.defineFlow(
                     files
                 );
                 
-                const aiResult = await analyzeWithAI(processedData);
+                // Pass the API key from environment variables to the processor.
+                const geminiApiKey = process.env.GEMINI_API_KEY;
+                if (!geminiApiKey) {
+                    throw new Error("GEMINI_API_KEY environment variable not set for function.");
+                }
+                const aiResult = await analyzeWithAI(processedData, geminiApiKey);
 
                 const resultsRef = admin.firestore().collection('budget_results').doc();
                 
@@ -63,7 +68,9 @@ const processBudgetDataFlow = ai.defineFlow(
                     sessionId,
                     timestamp: admin.firestore.FieldValue.serverTimestamp(),
                     verifiedMetrics: aiResult.verifiedMetrics,
-                    aiAnalysis: aiResult.aiAnalysis, 
+                    aiAnalysis: aiResult.aiAnalysis,
+                    processingTime: new Date().toISOString(),
+                    fileTypes: Object.keys(files || {})
                 });
                 
                 await sessionRef.update({
