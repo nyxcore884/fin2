@@ -59,7 +59,7 @@ export function FileInput({
           >
             <UploadCloud className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Click or drag file to upload</p>
-            <input type="file" ref={inputRef} onChange={handleFileChange} className="hidden" accept=".csv,.xlsx" />
+            <input type="file" ref={inputRef} onChange={handleFileChange} className="hidden" accept=".csv,.xlsx,.xls,.pdf" />
           </div>
         )}
         {file && (

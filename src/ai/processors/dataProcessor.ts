@@ -1,9 +1,10 @@
 import { Storage } from '@google-cloud/storage';
 import csv from 'csv-parser';
 import * as XLSX from 'xlsx';
-import { createReadStream } from 'fs';
+import { createReadStream, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import pdf from 'pdf-parse';
 
 const storage = new Storage();
 
@@ -60,6 +61,8 @@ const downloadAndParseFiles = async (files: any) => {
       fileData[fileType] = await parseCSV(tempFilePath);
     } else if (filePath.endsWith('.xlsx') || filePath.endsWith('.xls')) {
       fileData[fileType] = parseExcel(tempFilePath);
+    } else if (filePath.endsWith('.pdf')) {
+        fileData[fileType] = await parsePDF(tempFilePath);
     }
   }
 
@@ -83,6 +86,32 @@ const parseExcel = (filePath: string): any[] => {
   const worksheet = workbook.Sheets[sheetName];
   return XLSX.utils.sheet_to_json(worksheet);
 };
+
+const parsePDF = async (filePath: string): Promise<any[]> => {
+    try {
+      // For PDF files, we need to extract text and then parse it
+      const dataBuffer = readFileSync(filePath);
+      const data = await pdf(dataBuffer);
+      
+      // Basic PDF text extraction - you might need more sophisticated parsing
+      // depending on your PDF structure
+      const lines = data.text.split('\n').filter(line => line.trim() !== '');
+      
+      // Simple CSV-like parsing for tabular data in PDF
+      const results = lines.map(line => {
+        const values = line.split(/\s{2,}/); // Split by multiple spaces
+        return {
+          rawText: line,
+          values: values
+        };
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('PDF parsing error:', error);
+      throw new Error('Failed to parse PDF file');
+    }
+  };
 
 const applyMappings = (fileData: any): ProcessedData => {
   const result: ProcessedData = {

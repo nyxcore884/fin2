@@ -19,6 +19,14 @@ export const analyzeWithAI = async (data: any): Promise<AIAnalysis> => {
         temperature: 0.3,
       },
     });
+    
+    // Handle PDF content if present
+    let pdfContext = '';
+    if (data.rawDataForAI && data.rawDataForAI.some((item: any) => item.rawText)) {
+      pdfContext = `PDF CONTEXT: Some data was extracted from PDF files. 
+      This may include additional context not captured in structured fields.`;
+    }
+
 
     const prompt = `
 As a senior financial analyst for a gas distribution company, analyze the following budget data:
@@ -34,6 +42,8 @@ ${Object.entries(data.costsByHolder).map(([dept, amount]) => `  - ${dept}: $${Nu
 
 COST BREAKDOWN BY REGION:
 ${Object.entries(data.costsByRegion).map(([region, amount]) => `  - ${region}: $${Number(amount).toLocaleString()}`).join('\n')}
+
+${pdfContext}
 
 Please provide:
 1. REVENUE CLASSIFICATION: Accurate breakdown of retail vs wholesale revenue
