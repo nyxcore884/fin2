@@ -14,20 +14,29 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { MOCK_COST_DATA, MOCK_COST_CHART_CONFIG } from "@/lib/data"
 
-export function CostByHolderChart() {
+const chartConfig = {
+  costs: { label: "Costs" },
+  // Dynamically generate colors for holders if needed
+}
+
+export function CostByHolderChart({ data }: { data: { holder: string; amount: number }[] }) {
+  const chartData = data.map(item => ({
+    budgetHolder: item.holder,
+    costs: item.amount,
+  }));
+
   return (
     <Card className="h-full bg-card/80 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="font-headline">Costs by Budget Holder</CardTitle>
-        <CardDescription>Latest Quarter</CardDescription>
+        <CardDescription>From Latest Report</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer id="cost-by-holder" config={MOCK_COST_CHART_CONFIG} className="h-[300px] w-full">
+        <ChartContainer id="cost-by-holder" config={chartConfig} className="h-[300px] w-full">
           <BarChart
             accessibilityLayer
-            data={MOCK_COST_DATA}
+            data={chartData}
             margin={{
               top: 20,
               right: 20,
@@ -41,6 +50,9 @@ export function CostByHolderChart() {
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis
               tickFormatter={(value) => `$${Number(value) / 1000}k`}
@@ -50,8 +62,8 @@ export function CostByHolderChart() {
               content={<ChartTooltipContent indicator="line" />}
             />
             <Bar dataKey="costs" radius={4}>
-              {MOCK_COST_DATA.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${index + 1}))`} />
+              {chartData.map((_, index) => (
+                <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
               ))}
             </Bar>
           </BarChart>

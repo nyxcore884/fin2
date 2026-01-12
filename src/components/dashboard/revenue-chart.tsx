@@ -15,9 +15,29 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import { MOCK_REVENUE_DATA, MOCK_REVENUE_CHART_CONFIG } from "@/lib/data"
+import type { ChartConfig } from '@/components/ui/chart';
 
-export function RevenueChart() {
+
+const chartConfig = {
+  amount: {
+    label: '$',
+  },
+  retail: {
+    label: 'Retail',
+    color: 'hsl(var(--chart-1))',
+  },
+  wholesale: {
+    label: 'Wholesale',
+    color: 'hsl(var(--chart-2))',
+  },
+} satisfies ChartConfig;
+
+export function RevenueChart({ data }: { data: any }) {
+  const chartData = [
+    { type: 'Retail Revenue', amount: data.retailRevenue || 0, fill: 'var(--color-retail)' },
+    { type: 'Wholesale Revenue', amount: data.wholesaleRevenue || 0, fill: 'var(--color-wholesale)' },
+  ];
+  
   return (
     <Card className="h-full bg-card/80 backdrop-blur-sm">
       <CardHeader>
@@ -27,7 +47,7 @@ export function RevenueChart() {
       <CardContent className="pb-0">
         <ChartContainer
           id="revenue-breakdown"
-          config={MOCK_REVENUE_CHART_CONFIG}
+          config={chartConfig}
           className="mx-auto aspect-square max-h-[250px]"
         >
           <PieChart>
@@ -36,14 +56,14 @@ export function RevenueChart() {
               content={<ChartTooltipContent hideLabel />}
             />
             <Pie
-              data={MOCK_REVENUE_DATA}
+              data={chartData}
               dataKey="amount"
               nameKey="type"
               innerRadius={60}
               strokeWidth={5}
               stroke="hsl(var(--card))"
             >
-               {MOCK_REVENUE_DATA.map((entry, index) => (
+               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}
             </Pie>
