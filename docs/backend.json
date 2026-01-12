@@ -192,6 +192,64 @@
         }
       },
       "required": ["sessionId", "userId", "timestamp", "status"]
+    },
+    "UserFeedback": {
+      "title": "UserFeedback",
+      "type": "object",
+      "description": "Represents feedback submitted by a user about the application or its analysis.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The Firebase Auth UID of the user who submitted the feedback."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "The session ID related to the feedback, if applicable."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the feedback was submitted."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["rating", "correction", "suggestion", "bug_report"],
+          "description": "The general type of feedback."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["ai_analysis", "data_processing", "ui_ux", "mapping", "performance"],
+          "description": "The specific area of the application the feedback relates to."
+        },
+        "rating": {
+          "type": "number",
+          "description": "A numerical rating from 1 to 5, if applicable."
+        },
+        "comment": {
+          "type": "string",
+          "description": "The detailed comment from the user."
+        },
+        "context": {
+          "type": "object",
+          "description": "Contextual information related to the feedback.",
+          "properties": {
+            "aiResponse": { "type": "string" },
+            "userQuestion": { "type": "string" },
+            "dataSnapshot": { "type": "object" }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "reviewed", "implemented", "wont_fix"],
+          "description": "The processing status of the feedback."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "The priority assigned to the feedback."
+        }
+      },
+      "required": ["userId", "timestamp", "type", "category", "comment", "status", "priority"]
     }
   },
   "auth": {
@@ -235,6 +293,15 @@
             "$ref": "#/entities/Backup"
           },
           "description": "Stores metadata for automated backups of processed sessions."
+        }
+      },
+      {
+        "path": "/feedback/{feedbackId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/UserFeedback"
+          },
+          "description": "Stores user-submitted feedback for continuous improvement."
         }
       }
     ]

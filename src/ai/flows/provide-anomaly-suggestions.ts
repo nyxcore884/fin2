@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK if not already initialized
@@ -50,21 +50,23 @@ const provideAnomalySuggestionsFlow = ai.defineFlow(
     try {
       if (sessionId) {
         // Get specific session data
-        const sessionDoc = await admin.firestore()
+        const resultDoc = await admin.firestore()
           .collection("budget_results")
-          .doc(sessionId)
+          .where("sessionId", "==", sessionId)
+          .where("userId", "==", userId)
+          .limit(1)
           .get();
         
-        if (sessionDoc.exists && sessionDoc.data()?.userId === userId) {
-          const sessionData = sessionDoc.data();
-          userData = JSON.stringify({
-            totalCosts: sessionData.totalCosts,
-            retailRevenue: sessionData.retailRevenue,
-            wholesaleRevenue: sessionData.wholesaleRevenue,
-            costsByHolder: sessionData.costsByHolder,
-            costsByRegion: sessionData.costsByRegion,
-            anomalies: sessionData.anomalies,
-            insights: sessionData.insights
+        if (!resultDoc.empty) {
+          const resultData = resultDoc.docs[0].data();
+           userData = JSON.stringify({
+            totalCosts: resultData.verifiedMetrics?.totalCosts,
+            retailRevenue: resultData.verifiedMetrics?.retailRevenue,
+            wholesaleRevenue: resultData.verifiedMetrics?.wholesaleRevenue,
+            costsByHolder: resultData.verifiedMetrics?.costsByHolder,
+            costsByRegion: resultData.verifiedMetrics?.costsByRegion,
+            anomalies: resultData.aiAnalysis?.anomalies,
+            insights: resultData.aiAnalysis?.insights
           }, null, 2);
         }
       } else {
@@ -76,8 +78,19 @@ const provideAnomalySuggestionsFlow = ai.defineFlow(
           .limit(5)
           .get();
         
-        const sessions = userDocs.docs.map(doc => doc.data());
-        userData = JSON.stringify(sessions, null, 2);
+        const sessions = userDocs.docs.map(doc => {
+            const data = doc.data();
+            return {
+                sessionId: data.sessionId,
+                timestamp: data.timestamp.toDate(),
+                totalCosts: data.verifiedMetrics?.totalCosts,
+                retailRevenue: data.verifiedMetrics?.retailRevenue,
+                wholesaleRevenue: data.verifiedMetrics?.wholesaleRevenue,
+            }
+        });
+        if (sessions.length > 0) {
+            userData = JSON.stringify(sessions, null, 2);
+        }
       }
     } catch (error) {
         console.error("Firestore query failed:", error);
@@ -88,7 +101,7 @@ const provideAnomalySuggestionsFlow = ai.defineFlow(
       You are a financial analyst AI assistant for a gas distribution company. 
       The user has asked: "${message}"
 
-      Here is the user's financial data:
+      Here is the user's financial data context (if available):
       ${userData || "No financial data available for this user."}
 
       Please provide a comprehensive, helpful response based on their data. 
@@ -96,12 +109,12 @@ const provideAnomalySuggestionsFlow = ai.defineFlow(
       reference their actual data in your response.
 
       Key guidelines:
-      1. Be precise and data-driven
-      2. Reference specific numbers from their data when relevant
-      3. Provide actionable insights
-      4. Explain complex financial concepts in simple terms
-      5. If they ask about something not in the data, politely explain the limitation
-      6. Format your response clearly with bullet points and sections when appropriate
+      1. Be precise and data-driven.
+      2. Reference specific numbers from their data when relevant.
+      3. Provide actionable insights.
+      4. Explain complex financial concepts in simple terms.
+      5. If they ask about something not in the data, politely explain the limitation.
+      6. Format your response clearly with markdown, using bullet points and sections when appropriate.
 
       Response:
     `;
