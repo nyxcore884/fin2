@@ -20,5 +20,11 @@ service cloud.firestore {
       allow read, delete: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow list: if request.auth != null; // Users can list their own results via query
     }
+
+    // Backups can only be created by Cloud Functions and read by admins
+    match /backups/{backupId} {
+        allow create: if request.auth == null; // Allow from Cloud Functions
+        allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
   }
 }

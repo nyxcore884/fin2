@@ -20,6 +20,26 @@ if (admin.apps.length === 0) {
     admin.initializeApp();
 }
 
+/**
+ * Initiates a backup process for a given session.
+ * In a real-world scenario, this would also trigger a Cloud Storage transfer.
+ */
+export const initiateBackup = async (sessionId: string, userId: string) => {
+  const backupData = {
+    sessionId,
+    userId,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    status: 'completed', // In a real scenario, this might be 'pending' then updated.
+    storagePath: `gs://${process.env.GCLOUD_STORAGE_BUCKET}/backups/${sessionId}`
+  };
+
+  // Store backup metadata in Firestore
+  await admin.firestore().collection('backups').add(backupData);
+  
+  console.log(`Backup metadata logged for session ${sessionId}`);
+};
+
+
 const processBudgetDataFlow = ai.defineFlow(
     {
         name: 'processBudgetDataFlow',
@@ -67,8 +87,16 @@ const processBudgetDataFlow = ai.defineFlow(
                     userId,
                     sessionId,
                     timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                    verifiedMetrics: aiResult.verifiedMetrics,
-                    aiAnalysis: aiResult.aiAnalysis,
+                    verifiedMetrics: {
+                        ...processedData,
+                        retailRevenue: aiResult.revenueClassification.retail,
+                        wholesaleRevenue: aiResult.revenueClassification.wholesale,
+                    },
+                    aiAnalysis: {
+                        anomalies: aiResult.anomalies,
+                        insights: aiResult.insights,
+                        recommendations: aiResult.recommendations,
+                    },
                     processingTime: new Date().toISOString(),
                     fileTypes: Object.keys(files || {})
                 });
@@ -78,6 +106,9 @@ const processBudgetDataFlow = ai.defineFlow(
                     completedAt: admin.firestore.FieldValue.serverTimestamp(),
                     resultId: resultsRef.id,
                 });
+
+                // Initiate backup after successful processing
+                await initiateBackup(sessionId, userId);
 
                 console.log(
                     `Successfully processed session ${sessionId} for user ${userId}`

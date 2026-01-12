@@ -162,6 +162,36 @@
         "uploadedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "path", "uploadedAt"]
+    },
+    "Backup": {
+      "title": "Backup",
+      "type": "object",
+      "description": "Represents metadata for a backup of a processed session.",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "The ID of the session that was backed up."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owned the session."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the backup was created."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "completed", "failed"],
+          "description": "The status of the backup."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "The path in Cloud Storage to the backup archive."
+        }
+      },
+      "required": ["sessionId", "userId", "timestamp", "status"]
     }
   },
   "auth": {
@@ -196,6 +226,15 @@
             "$ref": "#/entities/BudgetResult"
           },
           "description": "Stores the final, processed output of a successful analysis run."
+        }
+      },
+      {
+        "path": "/backups/{backupId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/Backup"
+          },
+          "description": "Stores metadata for automated backups of processed sessions."
         }
       }
     ]
