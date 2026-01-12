@@ -20,6 +20,11 @@ export interface ProcessedData {
     topCostDrivers: { name: string; amount: number; percentage: string }[];
     regionalDistribution: { region: string; amount: number; percentage: string }[];
     holderDistribution: { holder: string; amount: number; percentage: string }[];
+    detailedBreakdown: {
+      byBudgetArticle: { [key: string]: number };
+      byStructuralUnit: { [key: string]: number };
+      byRegion: { [key: string]: number };
+    },
   };
   // Raw data is now only for optional context, not for AI calculation
   rawDataForAI: any[];
@@ -131,59 +136,95 @@ const parsePDF = async (filePath: string): Promise<any[]> => {
   };
 
 const applyMappings = (fileData: any): ProcessedData => {
-  const result: Omit<ProcessedData, 'verifiedMetrics'> & Pick<ProcessedData, 'verifiedMetrics'>['verifiedMetrics'] = {
+  const result = {
     retailRevenue: 0,
     wholesaleRevenue: 0,
     totalCosts: 0,
-    costsByHolder: {},
-    costsByRegion: {},
+    costsByHolder: {} as {[key: string]: number},
+    costsByRegion: {} as {[key: string]: number},
     transactionCount: 0,
-    rawDataForAI: [],
-    topCostDrivers: [],
-    regionalDistribution: [],
-    holderDistribution: []
+    detailedBreakdown: {
+      byBudgetArticle: {} as {[key: string]: number},
+      byStructuralUnit: {} as {[key: string]: number},
+      byRegion: {} as {[key: string]: number}
+    },
+    rawDataForAI: [] as any[]
   };
+
+  const costItemMap = new Map();
+  if (fileData.costItemMap) {
+    fileData.costItemMap.forEach((item: any) => costItemMap.set(item.cost_item, item.budget_article));
+  }
+
+  const budgetHolderMap = new Map();
+  if (fileData.budgetHolderMapping) {
+      fileData.budgetHolderMapping.forEach((item: any) => budgetHolderMap.set(item.budget_article, item.budget_holder));
+  }
+  
+  const regionalMap = new Map();
+  if (fileData.regionalMapping) {
+    fileData.regionalMapping.forEach((item: any) => regionalMap.set(item.structural_unit, item.region));
+  }
+
+  const correctionsMap = new Map();
+  if (fileData.corrections) {
+      fileData.corrections.forEach((correction: any) => {
+          const key = `${correction.cost_item}|${correction.structural_unit}|${correction.counterparty}`;
+          if (!correctionsMap.has(key) || correctionsMap.get(key).priority > correction.priority) {
+              correctionsMap.set(key, correction);
+          }
+      });
+  }
 
   if (fileData.glEntries) {
     fileData.glEntries.forEach((entry: any) => {
-      let costMapping;
-      if (fileData.costItemMap) {
-        costMapping = fileData.costItemMap.find(
-          (m: any) => m.cost_item === entry.Subc_Debit
-        );
-      }
-
       const amount = parseFloat(entry.Amount_Reporting_Curr || '0');
+      const subcDebit = entry.Subc_Debit;
+      const structuralUnit = entry.structural_unit;
+      const counterparty = entry.counterparty;
+      
+      let budgetArticle = null;
+      let corrected = false;
+      const correctionKey = `${subcDebit}|${structuralUnit}|${counterparty}`;
 
-      if (costMapping) {
-        result.totalCosts += Math.abs(amount);
-        result.transactionCount++;
-
-        if (fileData.budgetHolderMap) {
-          const holderMapping = fileData.budgetHolderMap.find(
-            (m: any) => m.budget_article === costMapping.budget_article
-          );
-          if (holderMapping) {
-            result.costsByHolder[holderMapping.budget_holder] =
-              (result.costsByHolder[holderMapping.budget_holder] || 0) + Math.abs(amount);
-          }
-        }
-        
-        if (fileData.regionalMap) {
-            const regionMapping = fileData.regionalMap.find(
-                (m: any) => m.structural_unit === entry.structural_unit
-            );
-            if (regionMapping) {
-                result.costsByRegion[regionMapping.region] = 
-                    (result.costsByRegion[regionMapping.region] || 0) + Math.abs(amount);
-            }
-        }
-
+      if (correctionsMap.has(correctionKey)) {
+        const correction = correctionsMap.get(correctionKey);
+        budgetArticle = correction.corrected_budget_article;
+        corrected = true;
       } else {
-        // Assume it's revenue if not found in cost map
+        budgetArticle = costItemMap.get(subcDebit);
       }
       
-      result.rawDataForAI.push(entry);
+      if (budgetArticle) {
+          const absAmount = Math.abs(amount);
+          if (amount > 0) {
+              result.retailRevenue += absAmount; // Preliminary assignment
+          } else {
+              result.totalCosts += absAmount;
+              result.transactionCount++;
+
+              const budgetHolder = budgetHolderMap.get(budgetArticle);
+              if (budgetHolder) {
+                  result.costsByHolder[budgetHolder] = (result.costsByHolder[budgetHolder] || 0) + absAmount;
+              }
+
+              const region = regionalMap.get(structuralUnit);
+              if (region) {
+                  result.costsByRegion[region] = (result.costsByRegion[region] || 0) + absAmount;
+                  result.detailedBreakdown.byRegion[region] = (result.detailedBreakdown.byRegion[region] || 0) + absAmount;
+              }
+              
+              result.detailedBreakdown.byBudgetArticle[budgetArticle] = (result.detailedBreakdown.byBudgetArticle[budgetArticle] || 0) + absAmount;
+              result.detailedBreakdown.byStructuralUnit[structuralUnit] = (result.detailedBreakdown.byStructuralUnit[structuralUnit] || 0) + absAmount;
+          }
+
+          result.rawDataForAI.push({
+              ...entry,
+              budget_article: budgetArticle,
+              corrected,
+              amount: absAmount,
+          });
+      }
     });
   }
 
@@ -219,7 +260,8 @@ const applyMappings = (fileData: any): ProcessedData => {
     costsByRegion: result.costsByRegion,
     topCostDrivers,
     regionalDistribution,
-    holderDistribution
+    holderDistribution,
+    detailedBreakdown: result.detailedBreakdown
   };
 
   return {

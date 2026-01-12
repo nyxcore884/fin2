@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ProcessedData } from './dataProcessor';
 
 export interface AIAnalysis {
+  revenueClassification: { retail: number; wholesale: number };
   anomalies: string[];
   insights: string[];
   recommendations: string[];
@@ -21,41 +22,47 @@ export const analyzeWithAI = async (data: ProcessedData, apiKey: string): Promis
       model: 'gemini-pro',
       generationConfig: {
         maxOutputTokens: 2048,
-        temperature: 0.3,
+        temperature: 0.2,
       },
     });
     
-    let pdfContext = '';
-    if (data.rawDataForAI && data.rawDataForAI.some((item: any) => item.rawText)) {
-      pdfContext = `PDF CONTEXT: Some data was extracted from PDF files. 
-      This may include additional context not captured in structured fields.`;
-    }
-
     const prompt = `
-CRITICAL INSTRUCTION: You are a financial analyst explaining PRE-CALCULATED data.
-You MUST NOT perform any of your own calculations. You MUST ONLY use the numbers provided below.
-Your task is to interpret, describe, and provide context for these verified figures.
+As a senior financial analyst specializing in gas distribution companies, analyze the following budget data:
 
-VERIFIED FINANCIAL DATA (DO NOT DEVIATE FROM THESE NUMBERS):
+FINANCIAL OVERVIEW:
 - Total Costs: $${data.verifiedMetrics.totalCosts.toLocaleString()}
-- Retail Revenue: $${data.verifiedMetrics.retailRevenue.toLocaleString()}
-- Wholesale Revenue: $${data.verifiedMetrics.wholesaleRevenue.toLocaleString()}
+- Preliminary Revenue: $${data.verifiedMetrics.retailRevenue.toLocaleString()}
 - Transaction Count: ${data.verifiedMetrics.transactionCount}
 
-TOP COST DRIVERS (Pre-Calculated):
-${data.verifiedMetrics.topCostDrivers.map(d => `  - ${d.name}: $${d.amount.toLocaleString()} (${d.percentage})`).join('\n')}
+COST BREAKDOWN BY DEPARTMENT:
+${Object.entries(data.verifiedMetrics.costsByHolder).map(([dept, amount]) => `  - ${dept}: $${Number(amount).toLocaleString()}`).join('\n')}
 
-REGIONAL DISTRIBUTION (Pre-Calculated):
-${data.verifiedMetrics.regionalDistribution.map(d => `  - ${d.region}: $${d.amount.toLocaleString()} (${d.percentage})`).join('\n')}
+COST BREAKDOWN BY REGION:
+${Object.entries(data.verifiedMetrics.costsByRegion).map(([region, amount]) => `  - ${region}: $${Number(amount).toLocaleString()}`).join('\n')}
+
+DETAILED BREAKDOWN:
+- By Budget Article: ${Object.keys(data.verifiedMetrics.detailedBreakdown.byBudgetArticle).length} categories
+- By Structural Unit: ${Object.keys(data.verifiedMetrics.detailedBreakdown.byStructuralUnit).length} units
+- By Region: ${Object.keys(data.verifiedMetrics.detailedBreakdown.byRegion).length} regions
+
+RAW TRANSACTION DATA SAMPLE:
+${JSON.stringify(data.rawDataForAI.slice(0, 5), null, 2)}
 
 YOUR TASK:
-1. DESCRIBE the cost structure based on the pre-calculated drivers and distribution.
-2. HYPOTHESIZE about potential reasons for the observed distribution (e.g., "The high costs in Kakheti could be due to...").
-3. RECOMMEND actions based on the pre-calculated percentages.
-4. UNDER NO CIRCUMSTANCES should you invent or calculate new numbers. Only use the percentages and figures provided above.
+1. REVENUE CLASSIFICATION: Analyze the raw transaction data and provide accurate retail vs wholesale revenue breakdown
+2. ANOMALIES: Identify 3-5 significant anomalies or unusual patterns with specific evidence from the data
+3. INSIGHTS: Provide 3-5 actionable insights for executive management with specific data references
+4. RECOMMENDATIONS: Suggest 3 concrete recommendations for cost optimization and revenue growth
 
-Format your response as valid JSON with this structure:
+CRITICAL RULES:
+- DO NOT invent or assume any numbers not present in the data
+- Reference specific amounts and percentages from the data provided
+- Focus on patterns that indicate efficiency opportunities or risks
+- Consider regional variations and departmental performance
+
+Format the response as valid JSON with this structure:
 {
+  "revenueClassification": {"retail": number, "wholesale": number},
   "anomalies": string[],
   "insights": string[],
   "recommendations": string[]
@@ -70,6 +77,10 @@ Format your response as valid JSON with this structure:
     
     const aiAnalysis: AIAnalysis = JSON.parse(cleanResponse);
 
+    // Override the preliminary revenue with the AI's classification
+    data.verifiedMetrics.retailRevenue = aiAnalysis.revenueClassification.retail;
+    data.verifiedMetrics.wholesaleRevenue = aiAnalysis.revenueClassification.wholesale;
+
     return {
       verifiedMetrics: data.verifiedMetrics,
       aiAnalysis: aiAnalysis
@@ -81,6 +92,7 @@ Format your response as valid JSON with this structure:
     return {
       verifiedMetrics: data.verifiedMetrics,
       aiAnalysis: {
+        revenueClassification: { retail: data.verifiedMetrics.retailRevenue, wholesale: 0 },
         anomalies: ["AI analysis temporarily unavailable. Please review the verified metrics below."],
         insights: [],
         recommendations: []
