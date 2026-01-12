@@ -95,7 +95,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <Select value={theme} onValueChange={setTheme}>
-                    <SelectTrigger className="w-[180px]" id="theme-select">
+                    <SelectTrigger className="w-[180px]" id="theme-select" name="theme-select">
                       <SelectValue placeholder="Select theme" />
                     </SelectTrigger>
                     <SelectContent>
