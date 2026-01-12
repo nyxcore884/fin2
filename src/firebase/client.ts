@@ -1,27 +1,25 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { initializeFirestore, persistentLocalCache, getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { firebaseConfig } from '../firebase/config';
+'use client';
 
-let firebaseApp: FirebaseApp;
-let db: Firestore;
-let storage: FirebaseStorage;
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeFirestore, persistentLocalCache } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
-// Ensure Firebase app is initialized only once globally
-if (!getApps().length) {
-  firebaseApp = initializeApp(firebaseConfig);
-} else {
-  firebaseApp = getApp();
-}
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
 
-// Initialize Firestore with offline persistence
-// This should be done only once globally for the client-side application
-db = initializeFirestore(firebaseApp, {
-  localCache: persistentLocalCache(),
-  // tabManager: persistentMultipleTabManager() // Optional: if you want to sync cache across tabs
+// Initialize Firebase
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
 });
+const storage = getStorage(app);
+const auth = getAuth(app);
 
-// Get the Firebase Storage instance
-storage = getStorage(firebaseApp);
-
-export { firebaseApp, db, storage };
+export { app, db, storage, auth };

@@ -1,28 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { processBudgetData } from '@/ai/flows/process-budget-data';
+import { getFirestore, doc, updateDoc } from 'firebase-admin/firestore';
+import { app } from '@/firebase/admin';
 
+// This route now only updates the status of the session document in Firestore.
+// This is a more robust pattern that allows a dedicated backend service (Cloud Function)
+// to handle the heavy processing, preventing the Next.js server from timing out.
 export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await request.json();
-
     if (!sessionId) {
-      return NextResponse.json(
-        { success: false, error: 'Session ID is required.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Session ID is required.' }, { status: 400 });
     }
-    
-    // Asynchronously start the processing, but don't wait for it to finish.
-    // The client will get an immediate response.
-    processBudgetData(sessionId).catch(error => {
-        // This will log any unhandled errors during the background processing
-        // to the Next.js server logs.
-        console.error(`[Background Processing Error] for session ${sessionId}:`, error);
-    });
+
+    const db = getFirestore(app);
+    const sessionRef = doc(db, 'upload_sessions', sessionId);
+
+    // Update the status to 'ready_for_processing' to trigger the backend processor.
+    await updateDoc(sessionRef, { status: 'ready_for_processing' });
 
     return NextResponse.json({
       success: true,
-      message: `Processing initiated for session ${sessionId}.`,
+      message: `Processing initiated for session ${sessionId}. The backend is now handling the data.`,
     });
 
   } catch (error: any) {

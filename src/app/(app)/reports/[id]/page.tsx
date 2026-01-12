@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { notFound } from 'next/navigation';
@@ -27,7 +27,8 @@ type UploadSession = {
   resultId: string;
 };
 
-export default function ReportDetailPage({ params: { id } }: { params: { id: string } }) {
+export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [session, setSession] = useState<UploadSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

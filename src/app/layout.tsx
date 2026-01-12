@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import FloatingAIChat from "@/components/FloatingAIChat";
+import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: "Budget Insights",
@@ -28,7 +29,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
           <Toaster />
           <FloatingAIChat />
         </ThemeProvider>

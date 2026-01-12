@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
+import { useAuth } from '@/hooks/use-auth'; // Import useAuth hook
 
 interface OperationalUploadProps {
   onUploadComplete: (sessionId: string) => void;
@@ -20,11 +21,21 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisRequest, setAnalysisRequest] = useState('');
   
+  const { user } = useAuth(); // Get user from useAuth hook
   const { uploadFile, createUploadSession, markSessionAsReady } = useUploadFile();
   const { toast } = useToast();
 
   const handleUpload = async () => {
-    const userId = "anonymous_user"; // Since auth is removed
+    if (!user) { // Check if user is authenticated
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'You must be logged in to upload files.',
+      });
+      return;
+    }
+
+    const userId = user.uid; // Use authenticated user's ID
     if (!selectedFile || !analysisRequest.trim()) {
         toast({
             variant: 'destructive',
