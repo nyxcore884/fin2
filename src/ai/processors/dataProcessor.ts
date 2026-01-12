@@ -9,15 +9,22 @@ import pdf from 'pdf-parse';
 const storage = new Storage();
 
 export interface ProcessedData {
-  retailRevenue: number;
-  wholesaleRevenue: number;
-  totalCosts: number;
-  costsByHolder: { [key: string]: number };
-  costsByRegion: { [key: string]: number };
-  transactionCount: number;
-  // Store raw data for AI analysis
+  // VERIFIED METRICS (Calculated deterministically here)
+  verifiedMetrics: {
+    totalCosts: number;
+    retailRevenue: number;
+    wholesaleRevenue: number;
+    transactionCount: number;
+    costsByHolder: { [key: string]: number };
+    costsByRegion: { [key: string]: number };
+    topCostDrivers: { name: string; amount: number; percentage: string }[];
+    regionalDistribution: { region: string; amount: number; percentage: string }[];
+    holderDistribution: { holder: string; amount: number; percentage: string }[];
+  };
+  // Raw data is now only for optional context, not for AI calculation
   rawDataForAI: any[];
 }
+
 
 export const processUploadedFiles = async (
   userId: string,
@@ -89,15 +96,11 @@ const parseExcel = (filePath: string): any[] => {
 
 const parsePDF = async (filePath: string): Promise<any[]> => {
     try {
-      // For PDF files, we need to extract text and then parse it
       const dataBuffer = readFileSync(filePath);
       const data = await pdf(dataBuffer);
       
-      // Basic PDF text extraction - you might need more sophisticated parsing
-      // depending on your PDF structure
       const lines = data.text.split('\n').filter(line => line.trim() !== '');
       
-      // Simple CSV-like parsing for tabular data in PDF
       const results = lines.map(line => {
         const values = line.split(/\s{2,}/); // Split by multiple spaces
         return {
@@ -114,14 +117,17 @@ const parsePDF = async (filePath: string): Promise<any[]> => {
   };
 
 const applyMappings = (fileData: any): ProcessedData => {
-  const result: ProcessedData = {
+  const result: Omit<ProcessedData, 'verifiedMetrics'> & Pick<ProcessedData, 'verifiedMetrics'>['verifiedMetrics'] = {
     retailRevenue: 0,
     wholesaleRevenue: 0,
     totalCosts: 0,
     costsByHolder: {},
     costsByRegion: {},
     transactionCount: 0,
-    rawDataForAI: []
+    rawDataForAI: [],
+    topCostDrivers: [],
+    regionalDistribution: [],
+    holderDistribution: []
   };
 
   if (fileData.glEntries) {
@@ -136,7 +142,6 @@ const applyMappings = (fileData: any): ProcessedData => {
       const amount = parseFloat(entry.Amount_Reporting_Curr || '0');
 
       if (costMapping) {
-        // It's a cost
         result.totalCosts += Math.abs(amount);
         result.transactionCount++;
 
@@ -162,13 +167,49 @@ const applyMappings = (fileData: any): ProcessedData => {
 
       } else {
         // Assume it's revenue if not found in cost map
-        // We will classify this later with AI
       }
       
-      // Add raw entry for AI analysis
       result.rawDataForAI.push(entry);
     });
   }
 
-  return result;
+  const totalCostsVerified = result.totalCosts;
+
+  const topCostDrivers = Object.entries(result.costsByHolder)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([name, amount]) => ({
+      name,
+      amount,
+      percentage: ((amount / totalCostsVerified) * 100).toFixed(2) + '%'
+    }));
+
+  const regionalDistribution = Object.entries(result.costsByRegion).map(([region, amount]) => ({
+    region,
+    amount,
+    percentage: ((amount / totalCostsVerified) * 100).toFixed(2) + '%'
+  }));
+  
+  const holderDistribution = Object.entries(result.costsByHolder).map(([holder, amount]) => ({
+      holder,
+      amount,
+      percentage: ((amount / totalCostsVerified) * 100).toFixed(2) + '%'
+  }));
+
+  const verifiedMetrics = {
+    totalCosts: result.totalCosts,
+    retailRevenue: result.retailRevenue,
+    wholesaleRevenue: result.wholesaleRevenue,
+    transactionCount: result.transactionCount,
+    costsByHolder: result.costsByHolder,
+    costsByRegion: result.costsByRegion,
+    topCostDrivers,
+    regionalDistribution,
+    holderDistribution
+  };
+
+  return {
+    verifiedMetrics,
+    rawDataForAI: result.rawDataForAI
+  };
 };

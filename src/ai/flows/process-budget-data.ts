@@ -8,7 +8,6 @@ import { processUploadedFiles } from '../processors/dataProcessor';
 import { analyzeWithAI } from '../processors/aiProcessor';
 import { verifyFirebaseConfig } from '../processors/verifyConfig';
 
-// Verify configuration on function load
 try {
   verifyFirebaseConfig();
   console.log('✅ Configuration verified successfully');
@@ -17,7 +16,6 @@ try {
 }
 
 
-// Initialize Firebase Admin SDK if not already initialized
 if (admin.apps.length === 0) {
     admin.initializeApp();
 }
@@ -35,7 +33,6 @@ const processBudgetDataFlow = ai.defineFlow(
         const newData = change.after.data();
         const oldData = change.before.data();
 
-        // Only trigger when status changes to ready_for_processing
         if (
             newData?.status === 'ready_for_processing' &&
             oldData?.status !== 'ready_for_processing'
@@ -46,35 +43,29 @@ const processBudgetDataFlow = ai.defineFlow(
             const sessionRef = admin.firestore().collection('upload_sessions').doc(sessionId);
 
             try {
-                // 1. Update status to processing
                 await sessionRef.update({
                     status: 'processing',
                     startedAt: admin.firestore.FieldValue.serverTimestamp(),
                 });
 
-                // 2. Process the files through the ETL pipeline
                 const processedData = await processUploadedFiles(
                     userId,
                     sessionId,
                     files
                 );
                 
-                // 3. Get AI analysis for revenue classification and anomalies
-                const aiAnalysis = await analyzeWithAI(processedData);
+                const aiResult = await analyzeWithAI(processedData);
 
-                // 4. Save final result to budget_results collection
-                const resultsRef = await admin
-                    .firestore()
-                    .collection('budget_results')
-                    .add({
-                        userId,
-                        sessionId,
-                        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                        ...processedData,
-                        ...aiAnalysis,
-                    });
+                const resultsRef = admin.firestore().collection('budget_results').doc();
                 
-                // 5. Update session as completed
+                await resultsRef.set({
+                    userId,
+                    sessionId,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                    verifiedMetrics: aiResult.verifiedMetrics,
+                    aiAnalysis: aiResult.aiAnalysis, 
+                });
+                
                 await sessionRef.update({
                     status: 'completed',
                     completedAt: admin.firestore.FieldValue.serverTimestamp(),

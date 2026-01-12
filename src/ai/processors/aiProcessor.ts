@@ -1,16 +1,20 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ProcessedData } from './dataProcessor';
 
-// Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export interface AIAnalysis {
-  revenueClassification: { retail: number; wholesale: number };
   anomalies: string[];
   insights: string[];
   recommendations: string[];
 }
 
-export const analyzeWithAI = async (data: any): Promise<AIAnalysis> => {
+export interface AIResult {
+  verifiedMetrics: ProcessedData['verifiedMetrics'];
+  aiAnalysis: AIAnalysis;
+}
+
+export const analyzeWithAI = async (data: ProcessedData): Promise<AIResult> => {
   try {
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-pro',
@@ -20,40 +24,37 @@ export const analyzeWithAI = async (data: any): Promise<AIAnalysis> => {
       },
     });
     
-    // Handle PDF content if present
     let pdfContext = '';
     if (data.rawDataForAI && data.rawDataForAI.some((item: any) => item.rawText)) {
       pdfContext = `PDF CONTEXT: Some data was extracted from PDF files. 
       This may include additional context not captured in structured fields.`;
     }
 
-
     const prompt = `
-As a senior financial analyst for a gas distribution company, analyze the following budget data:
+CRITICAL INSTRUCTION: You are a financial analyst explaining PRE-CALCULATED data.
+You MUST NOT perform any of your own calculations. You MUST ONLY use the numbers provided below.
+Your task is to interpret, describe, and provide context for these verified figures.
 
-BUDGET OVERVIEW:
-- Total Costs: $${data.totalCosts.toLocaleString()}
-- Retail Revenue: $${data.retailRevenue.toLocaleString()}
-- Wholesale Revenue: $${data.wholesaleRevenue.toLocaleString()}
-- Transaction Count: ${data.transactionCount}
+VERIFIED FINANCIAL DATA (DO NOT DEVIATE FROM THESE NUMBERS):
+- Total Costs: $${data.verifiedMetrics.totalCosts.toLocaleString()}
+- Retail Revenue: $${data.verifiedMetrics.retailRevenue.toLocaleString()}
+- Wholesale Revenue: $${data.verifiedMetrics.wholesaleRevenue.toLocaleString()}
+- Transaction Count: ${data.verifiedMetrics.transactionCount}
 
-COST BREAKDOWN BY DEPARTMENT:
-${Object.entries(data.costsByHolder).map(([dept, amount]) => `  - ${dept}: $${Number(amount).toLocaleString()}`).join('\n')}
+TOP COST DRIVERS (Pre-Calculated):
+${data.verifiedMetrics.topCostDrivers.map(d => `  - ${d.name}: $${d.amount.toLocaleString()} (${d.percentage})`).join('\n')}
 
-COST BREAKDOWN BY REGION:
-${Object.entries(data.costsByRegion).map(([region, amount]) => `  - ${region}: $${Number(amount).toLocaleString()}`).join('\n')}
+REGIONAL DISTRIBUTION (Pre-Calculated):
+${data.verifiedMetrics.regionalDistribution.map(d => `  - ${d.region}: $${d.amount.toLocaleString()} (${d.percentage})`).join('\n')}
 
-${pdfContext}
+YOUR TASK:
+1. DESCRIBE the cost structure based on the pre-calculated drivers and distribution.
+2. HYPOTHESIZE about potential reasons for the observed distribution (e.g., "The high costs in Kakheti could be due to...").
+3. RECOMMEND actions based on the pre-calculated percentages.
+4. UNDER NO CIRCUMSTANCES should you invent or calculate new numbers. Only use the percentages and figures provided above.
 
-Please provide:
-1. REVENUE CLASSIFICATION: Accurate breakdown of retail vs wholesale revenue
-2. ANOMALIES: 3-5 most significant anomalies or unusual patterns with potential causes
-3. INSIGHTS: 3-5 key insights for executive management
-4. RECOMMENDATIONS: 3 actionable recommendations for cost optimization
-
-Format the response as valid JSON with this structure:
+Format your response as valid JSON with this structure:
 {
-  "revenueClassification": {"retail": number, "wholesale": number},
   "anomalies": string[],
   "insights": string[],
   "recommendations": string[]
@@ -63,27 +64,26 @@ Format the response as valid JSON with this structure:
     const result = await model.generateContent(prompt);
     const response = await result.response;
     
-    // Parse the AI response
     const textResponse = response.text();
-    
-    // Clean the response (remove markdown code blocks if present)
     const cleanResponse = textResponse.replace(/```json\n?|\n?```/g, '');
     
     const aiAnalysis: AIAnalysis = JSON.parse(cleanResponse);
-    return aiAnalysis;
+
+    return {
+      verifiedMetrics: data.verifiedMetrics,
+      aiAnalysis: aiAnalysis
+    };
 
   } catch (error) {
     console.error("AI analysis failed:", error);
     
-    // Return default analysis if AI fails
     return {
-      revenueClassification: {
-        retail: data.retailRevenue || 0,
-        wholesale: data.wholesaleRevenue || 0
-      },
-      anomalies: ["AI analysis temporarily unavailable. Please review data manually."],
-      insights: ["Initial data processing completed successfully. AI analysis pending."],
-      recommendations: ["Please verify the data quality and try AI analysis again."]
+      verifiedMetrics: data.verifiedMetrics,
+      aiAnalysis: {
+        anomalies: ["AI analysis temporarily unavailable. Please review the verified metrics below."],
+        insights: [],
+        recommendations: []
+      }
     };
   }
 };
