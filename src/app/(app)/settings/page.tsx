@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -88,7 +89,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">Theme</h3>
+                    <Label htmlFor="theme-select" className="font-medium">Theme</Label>
                     <p className="text-sm text-muted-foreground">
                       Choose between light, dark, or system default.
                     </p>
@@ -107,7 +108,7 @@ export default function SettingsPage() {
                  <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">Email Reports</h3>
+                    <Label htmlFor="email-reports" className="font-medium">Email Reports</Label>
                     <p className="text-sm text-muted-foreground">
                       Receive weekly summary reports via email.
                     </p>
@@ -130,7 +131,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">Processing Complete</h3>
+                    <Label htmlFor="processing-complete" className="font-medium">Processing Complete</Label>
                     <p className="text-sm text-muted-foreground">
                       Notify me when file processing is complete.
                     </p>
@@ -140,7 +141,7 @@ export default function SettingsPage() {
                  <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">Anomaly Detection</h3>
+                    <Label htmlFor="anomaly-detection" className="font-medium">Anomaly Detection</Label>
                     <p className="text-sm text-muted-foreground">
                       Notify me when significant anomalies are detected.
                     </p>
