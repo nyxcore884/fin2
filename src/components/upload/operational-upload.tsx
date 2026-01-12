@@ -46,15 +46,17 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
         setProgress(progress);
       });
 
+      const uploadedFiles = {
+        operationalFile: {
+          name: selectedFile.name,
+          path: storagePath,
+          uploadedAt: new Date()
+        }
+      };
+
       // Mark session as ready for processing with the analysis request
       await markSessionAsReady(sessionId, {
-        files: {
-          operationalFile: {
-            name: selectedFile.name,
-            path: storagePath,
-            uploadedAt: new Date()
-          }
-        },
+        files: uploadedFiles,
         analysisRequest: analysisRequest.trim(),
         mode: 'operational'
       });

@@ -87,6 +87,14 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
     }
   };
 
+  const getFormattedDate = (timestamp: any) => {
+    if (timestamp && typeof timestamp.seconds === 'number') {
+      return new Date(timestamp.seconds * 1000).toLocaleString();
+    }
+    return 'Pending...';
+  };
+  
+
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -129,7 +137,7 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
                 </div>
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">Created At:</span>
-                    <span>{new Date(session.createdAt?.seconds * 1000).toLocaleString()}</span>
+                    <span>{getFormattedDate(session.createdAt)}</span>
                 </div>
                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Status:</span>
@@ -162,7 +170,7 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
                         <TableRow key={type}>
                             <TableCell className="font-medium flex items-center gap-2"><FileIcon className="h-4 w-4 text-muted-foreground"/> {type}</TableCell>
                             <TableCell>{file.name}</TableCell>
-                            <TableCell>{new Date(file.uploadedAt.seconds * 1000).toLocaleDateString()}</TableCell>
+                            <TableCell>{getFormattedDate(file.uploadedAt)}</TableCell>
                             <TableCell className="text-right">
                                 <Button variant="outline" size="sm" onClick={() => handleDownload(file.path, file.name)}>
                                     <Download className="mr-2 h-4 w-4"/>
