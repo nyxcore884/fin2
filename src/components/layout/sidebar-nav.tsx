@@ -22,7 +22,8 @@ import {
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/upload', icon: UploadCloud, label: 'Upload Data' },
-  { href: '/reports', icon: FileText, label: 'Reports' },
+  // The main /reports link now goes to the dashboard, which contains the list
+  { href: '/dashboard', icon: FileText, label: 'Reports' }, 
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -42,7 +43,7 @@ export function SidebarNav() {
       <SidebarContent>
         <SidebarMenu>
           {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
+            <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
