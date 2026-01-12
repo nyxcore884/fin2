@@ -79,15 +79,23 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
     setProgress(0);
     const newSessionId = uuidv4();
 
+    const requiredFiles = fileTypes.filter(ft => ft.required).map(ft => ft.id);
+    const missingFiles = requiredFiles.filter(id => !selectedFiles[id]);
+
+    if (missingFiles.length > 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Required Files',
+            description: `Please upload the following files: ${missingFiles.join(', ')}`
+        });
+        setIsProcessing(false);
+        return;
+    }
+
+
     const filesToUpload = Object.entries(selectedFiles)
       .map(([id, file]) => ({ id, file, label: fileTypes.find(ft => ft.id === id)?.label || id }))
       .filter(f => f.file);
-
-    if (filesToUpload.length === 0) {
-      toast({ variant: 'destructive', title: 'No files selected', description: 'Please select at least one file to process.' });
-      setIsProcessing(false);
-      return;
-    }
 
     try {
       await createUploadSession(userId, newSessionId);
@@ -138,7 +146,7 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
     }
   };
 
-  const canUpload = Object.values(selectedFiles).some(file => file !== null);
+  const canUpload = fileTypes.filter(f => f.required).every(f => selectedFiles[f.id] !== null);
   
   if (isProcessing) {
     return (
@@ -208,7 +216,7 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
         </Button>
          {!canUpload && !isProcessing && (
           <p className="text-sm text-muted-foreground">
-            Please select at least one file to upload.
+            Please upload all required files to proceed.
           </p>
         )}
       </div>

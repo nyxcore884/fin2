@@ -47,7 +47,7 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
       });
 
       const uploadedFiles = {
-        operationalFile: {
+        glEntries: { // This was operationalFile, but backend expects glEntries
           name: selectedFile.name,
           path: storagePath,
           uploadedAt: new Date()
@@ -99,7 +99,7 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
             <div className="space-y-2">
                 <Label htmlFor="operational-file">Financial Data File <span className="text-destructive">*</span></Label>
                 <p className="text-xs text-muted-foreground">
-                    Upload your complete financial Excel file with multiple sheets.
+                    Upload your complete financial Excel or CSV file.
                 </p>
                 {selectedFile ? (
                      <div className="flex items-center justify-between text-sm text-green-400 border border-green-400/30 bg-green-950/50 rounded-md px-3 py-2">
@@ -114,7 +114,7 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
                             id="operational-file"
                             name="operational-file"
                             type="file"
-                            accept=".xlsx,.xls"
+                            accept=".xlsx,.xls,.csv"
                             onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                             disabled={isProcessing}
                             className="hidden"
