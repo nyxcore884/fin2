@@ -73,7 +73,7 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
   };
 
   const handleProcessFiles = async () => {
-    const userId = "anonymous_user"; // Since auth is removed
+    const userId = "anonymous-user"; // Since auth is removed
     setIsProcessing(true);
     setProgress(0);
     const newSessionId = uuidv4();
@@ -112,7 +112,10 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
       }
       
       setActiveFile('Finalizing...');
-      await markSessionAsReady(newSessionId, { files: uploadedFiles, mode: 'configuration' });
+      await markSessionAsReady(newSessionId, {
+        files: uploadedFiles,
+        mode: 'configuration'
+      });
 
       onUploadComplete(newSessionId);
 
