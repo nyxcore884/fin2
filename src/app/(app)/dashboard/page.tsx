@@ -29,6 +29,12 @@ interface RecentActivity {
     }
 }
 
+interface UploadStats {
+  totalUploads: number;
+  successfulUploads: number;
+  failedUploads: number;
+}
+
 interface DashboardMetrics {
   totalReports: number;
   totalCosts: number;
@@ -43,15 +49,21 @@ export default function DashboardPage() {
     totalRevenue: 0,
     recentActivity: []
   });
+  const [uploadStats, setUploadStats] = useState<UploadStats>({
+    totalUploads: 0,
+    successfulUploads: 0,
+    failedUploads: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
+    // Listener for budget_results
+    const reportsQuery = query(
       collection(db, 'budget_results'),
       orderBy('timestamp', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribeReports = onSnapshot(reportsQuery, (querySnapshot) => {
       const reports: RecentActivity[] = [];
       let totalCosts = 0;
       let totalRevenue = 0;
@@ -73,14 +85,37 @@ export default function DashboardPage() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Listener for upload_sessions
+    const sessionsQuery = query(collection(db, 'upload_sessions'));
+    const unsubscribeSessions = onSnapshot(sessionsQuery, (querySnapshot) => {
+        let successful = 0;
+        let failed = 0;
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.status === 'completed') successful++;
+            if (data.status === 'error') failed++;
+        });
+
+        setUploadStats({
+            totalUploads: querySnapshot.size,
+            successfulUploads: successful,
+            failedUploads: failed,
+        });
+    });
+
+
+    return () => {
+      unsubscribeReports();
+      unsubscribeSessions();
+    };
   }, []);
 
   if (loading) {
     return (
       <div className="flex flex-col gap-8">
         <Skeleton className="h-10 w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -103,7 +138,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -133,6 +168,21 @@ export default function DashboardPage() {
           <CardContent>
             <p className="text-2xl font-bold">${metrics.totalRevenue.toLocaleString()}</p>
           </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Upload Success Rate</CardTitle>
+            </CardHeader>
+            <CardContent>
+                 <p className="text-2xl font-bold">
+                    {uploadStats.totalUploads > 0
+                        ? `${Math.round((uploadStats.successfulUploads / uploadStats.totalUploads) * 100)}%`
+                        : '100%'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {uploadStats.successfulUploads} successful / {uploadStats.failedUploads} failed
+                </p>
+            </CardContent>
         </Card>
       </div>
 
@@ -169,23 +219,6 @@ export default function DashboardPage() {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button asChild className="h-16">
-              <Link href="/upload">Upload New Data</Link>
-            </Button>
-            <Button asChild className="h-16" variant="outline">
-              <Link href="/reports">View All Reports</Link>
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

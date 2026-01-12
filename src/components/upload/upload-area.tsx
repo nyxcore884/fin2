@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '../ui/button';
-import { Sparkles, Wand, Loader, CheckCircle, UploadCloud } from 'lucide-react';
+import { Sparkles, Wand, Loader, CheckCircle, UploadCloud, FileCheck } from 'lucide-react';
 import { useUploadFile } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -14,28 +14,28 @@ const fileTypes = [
   {
     id: 'glEntries',
     label: 'General Ledger (GL) Entries',
-    description: 'Your main financial transactions from your accounting system.',
+    description: 'Core financial transactions.',
     required: true,
     accept: '.csv,.xlsx,.pdf'
   },
   {
     id: 'budgetHolderMapping',
     label: 'Budget Holder Mapping',
-    description: 'Links budget categories to department owners.',
+    description: 'Links categories to owners.',
     required: true,
     accept: '.csv,.xlsx'
   },
   {
     id: 'costItemMap',
     label: 'Cost Item Map',
-    description: 'Translates ledger codes into standard categories.',
+    description: 'Translates ledger codes.',
     required: true,
     accept: '.csv,.xlsx'
   },
   {
     id: 'regionalMapping',
     label: 'Regional Mapping',
-    description: 'Links departments to geographical regions.',
+    description: 'Links departments to regions.',
     required: true,
     accept: '.csv,.xlsx'
   },
@@ -49,14 +49,17 @@ const fileTypes = [
   {
     id: 'revenueReport',
     label: 'Revenue Report (Optional)',
-    description: 'Additional data to help classify revenue.',
+    description: 'Aids in revenue classification.',
     required: false,
     accept: '.csv,.xlsx,.pdf'
   },
 ];
 
+interface UploadAreaProps {
+  onUploadComplete: (sessionId: string) => void;
+}
 
-export function UploadArea() {
+export function UploadArea({ onUploadComplete }: UploadAreaProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -77,6 +80,7 @@ export function UploadArea() {
     setIsProcessing(true);
     setProgress(0);
     const newSessionId = uuidv4();
+    setSessionId(newSessionId);
 
     const filesToUpload = fileTypes.map(ft => ({ id: ft.id, file: selectedFiles[ft.id], required: ft.required, label: ft.label }))
       .filter(f => f.file);
@@ -88,11 +92,9 @@ export function UploadArea() {
     }
 
     try {
-      // 1. Create the session document in Firestore
       await createUploadSession(userId, newSessionId);
       toast({ title: "Upload Session Created", description: `Session ID: ${newSessionId.substring(0,8)}...` });
 
-      // 2. Upload all files sequentially to track progress
       for (const [index, fileToUpload] of filesToUpload.entries()) {
         const { id, file, label } = fileToUpload;
         if (!file) continue;
@@ -109,15 +111,18 @@ export function UploadArea() {
       }
       
       setActiveFile(null);
-
-      // 3. Mark the session as ready for processing
       await markSessionAsReady(newSessionId);
 
       toast({
           title: 'Upload Complete & Processing Started',
-          description: 'The backend is now processing your files. Check the dashboard for status updates.',
+          description: 'The backend is now processing your files. Check the history for status updates.',
       });
-      setSessionId(newSessionId);
+
+      onUploadComplete(newSessionId); // Notify parent component
+      // Reset form state for next upload
+      setSessionId(null);
+      setSelectedFiles(Object.fromEntries(fileTypes.map(f => [f.id, null])));
+
 
     } catch (error: any) {
        toast({
@@ -125,28 +130,34 @@ export function UploadArea() {
         title: 'Processing Failed',
         description: error.message || 'An unexpected error occurred.',
       });
-       setIsProcessing(false); // Re-enable button on failure
+    } finally {
+        setIsProcessing(false);
     }
   };
 
   const canUpload = fileTypes.filter(ft => ft.required).every(ft => selectedFiles[ft.id]);
 
-  if (sessionId) {
+  if (sessionId && isProcessing) {
     return (
         <Alert>
             <Terminal className="h-4 w-4" />
             <AlertTitle>Processing Initiated!</AlertTitle>
             <AlertDescription>
-                Your files have been securely uploaded. The backend process has been triggered, and you can monitor the status on your dashboard.
-                <div className="mt-2 text-xs text-muted-foreground">Session ID: {sessionId}</div>
+                Your files have been securely uploaded with Session ID: {sessionId.substring(0, 8)}... The backend is processing, and you can monitor the status in the Upload History.
             </AlertDescription>
+            <div className="w-full space-y-2 mt-4">
+                <Progress value={progress} className="h-2 w-full bg-accent/20" />
+                {activeFile && (
+                    <p className="text-sm text-muted-foreground">Uploading: <strong>{activeFile}</strong></p>
+                )}
+            </div>
         </Alert>
     )
   }
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {fileTypes.map((fileType) => (
             <div key={fileType.id} className="rounded-lg border bg-card/80 p-4 text-card-foreground shadow-sm backdrop-blur-sm">
                 <label className="block text-sm font-medium mb-1">
@@ -154,12 +165,12 @@ export function UploadArea() {
                 {fileType.required && <span className="text-destructive ml-1">*</span>}
                 </label>
                 <p className="text-xs text-muted-foreground mb-3">
-                {fileType.description} Accepts: {fileType.accept}
+                {fileType.description}
                 </p>
                 {selectedFiles[fileType.id] ? (
                     <div className="flex items-center justify-between text-sm text-green-400 border border-green-400/30 bg-green-950/50 rounded-md px-3 py-2">
-                        <span className="truncate">{selectedFiles[fileType.id]?.name}</span>
-                        <CheckCircle className="h-4 w-4 shrink-0"/>
+                        <span className="truncate flex items-center gap-2"><FileCheck className="h-4 w-4"/> {selectedFiles[fileType.id]?.name}</span>
+                        <button onClick={() => handleFileChange(fileType.id, null)} className="text-muted-foreground hover:text-destructive">x</button>
                     </div>
                 ) : (
                     <div className="flex items-center space-x-2">
@@ -182,14 +193,6 @@ export function UploadArea() {
       </div>
       
       <div className="flex flex-col items-end gap-4">
-        {isProcessing && (
-            <div className="w-full space-y-2">
-                <Progress value={progress} className="h-2 w-full bg-accent/20" />
-                {activeFile && (
-                    <p className="text-sm text-muted-foreground">Uploading: <strong>{activeFile}</strong></p>
-                )}
-            </div>
-        )}
         <Button size="lg" className="group relative overflow-hidden transition-all duration-300 hover:shadow-glow-accent" onClick={handleProcessFiles} disabled={isProcessing || !canUpload}>
           {isProcessing ? (
             <>
