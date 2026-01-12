@@ -76,16 +76,5 @@ export const useUploadFile = () => {
     }
   };
 
-  const updateSessionFiles = async (sessionId: string, fileType: string, fileName: string, storagePath: string) => {
-    const sessionRef = doc(firestore, 'upload_sessions', sessionId);
-    await updateDoc(sessionRef, {
-        [`files.${fileType}`]: {
-            name: fileName,
-            path: storagePath,
-            uploadedAt: serverTimestamp()
-        }
-    });
-  };
-
-  return { uploadFile, updateSessionFiles, createUploadSession, markSessionAsReady };
+  return { uploadFile, createUploadSession, markSessionAsReady };
 };

@@ -65,7 +65,7 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
     Object.fromEntries(fileTypes.map(f => [f.id, null]))
   );
 
-  const { uploadFile, createUploadSession, updateSessionFiles, markSessionAsReady } = useUploadFile();
+  const { uploadFile, createUploadSession, markSessionAsReady } = useUploadFile();
   const { toast } = useToast();
 
   const handleFileChange = (fileType: string, file: File | null) => {

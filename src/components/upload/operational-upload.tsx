@@ -48,10 +48,12 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
 
       // Mark session as ready for processing with the analysis request
       await markSessionAsReady(sessionId, {
-        operationalFile: {
-          name: selectedFile.name,
-          path: storagePath,
-          uploadedAt: new Date()
+        files: {
+            operationalFile: {
+              name: selectedFile.name,
+              path: storagePath,
+              uploadedAt: new Date()
+            }
         },
         analysisRequest: analysisRequest.trim(),
         mode: 'operational'
