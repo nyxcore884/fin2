@@ -1,7 +1,9 @@
 pandas
 firebase-admin
-functions-framework
+firebase-functions
 openpyxl
-xlrd
-google-cloud-storage
+numpy
 requests
+google-cloud-storage
+
+    

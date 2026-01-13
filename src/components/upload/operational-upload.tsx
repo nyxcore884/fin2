@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
-import { useAuth } from '@/hooks/use-auth'; // Import useAuth hook
+import { useAuth } from '@/hooks/use-auth';
 
 interface OperationalUploadProps {
   onUploadComplete: (sessionId: string) => void;
@@ -21,12 +21,12 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisRequest, setAnalysisRequest] = useState('');
   
-  const { user } = useAuth(); // Get user from useAuth hook
-  const { uploadFile, createUploadSession, markSessionAsReady } = useUploadFile();
+  const { user } = useAuth();
+  const { uploadFile, createUploadSession, updateSessionWithFiles } = useUploadFile();
   const { toast } = useToast();
 
   const handleUpload = async () => {
-    if (!user) { // Check if user is authenticated
+    if (!user) {
       toast({
         variant: 'destructive',
         title: 'Authentication Required',
@@ -35,7 +35,6 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
       return;
     }
 
-    const userId = user.uid; // Use authenticated user's ID
     if (!selectedFile || !analysisRequest.trim()) {
         toast({
             variant: 'destructive',
@@ -50,34 +49,36 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
     setProgress(0);
 
     try {
-      await createUploadSession(userId, sessionId);
+      await createUploadSession(user.uid, sessionId);
       
-      const storagePath = `user_uploads/${userId}/${sessionId}/operational/${selectedFile.name}`;
-      await uploadFile(storagePath, selectedFile, (progress) => {
-        setProgress(progress);
-      });
+      const storagePath = `user_uploads/${user.uid}/${sessionId}/operational/${selectedFile.name}`;
+      const downloadURL = await uploadFile(storagePath, selectedFile, setProgress);
 
       const uploadedFiles = {
-        glEntries: { // This was operationalFile, but backend expects glEntries
+        glEntries: {
           name: selectedFile.name,
           path: storagePath,
           uploadedAt: new Date()
         }
       };
 
-      // Mark session as ready for processing with the analysis request
-      await markSessionAsReady(sessionId, {
+      await updateSessionWithFiles(sessionId, {
         files: uploadedFiles,
         analysisRequest: analysisRequest.trim(),
         mode: 'operational'
       });
 
-      // Directly trigger backend processing via API route
-      await fetch('/api/process-session', {
+      // Call API route to trigger backend processing
+      const response = await fetch('/api/process-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId }),
       });
+
+      const result = await response.json();
+      if (!result.success) {
+          throw new Error(result.error || 'Failed to initiate processing.');
+      }
 
       onUploadComplete(sessionId);
 
@@ -106,7 +107,6 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
   return (
     <div className="rounded-lg border bg-card/80 p-6 space-y-8">
         <div className="space-y-4">
-            {/* File Upload */}
             <div className="space-y-2">
                 <Label htmlFor="operational-file">Financial Data File <span className="text-destructive">*</span></Label>
                 <p className="text-xs text-muted-foreground">
@@ -134,7 +134,6 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
                 )}
             </div>
 
-            {/* Analysis Request */}
             <div className="space-y-2">
                 <Label htmlFor="analysis-request">Analysis Request <span className="text-destructive">*</span></Label>
                  <p className="text-xs text-muted-foreground">
@@ -173,3 +172,5 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
     </div>
   );
 }
+
+    

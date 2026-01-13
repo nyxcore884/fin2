@@ -1,33 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, doc, updateDoc } from 'firebase-admin/firestore';
-import { app } from '@/firebase/admin';
+import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
-// This route now only updates the status of the session document in Firestore.
-// This is a more robust pattern that allows a dedicated backend service (Cloud Function)
-// to handle the heavy processing, preventing the Next.js server from timing out.
+// Initialize Firebase Admin SDK if not already done
+if (!admin.apps.length) {
+    try {
+        admin.initializeApp({
+            credential: admin.credential.applicationDefault(),
+        });
+    } catch (error) {
+        console.error("Firebase admin initialization error", error);
+    }
+}
+
+
+// This route is a simple bridge to trigger the backend Cloud Function
+// by updating the status of the session document in Firestore.
 export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await request.json();
+
     if (!sessionId) {
-      return NextResponse.json({ success: false, error: 'Session ID is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Session ID is required' }, { status: 400 });
     }
 
-    const db = getFirestore(app);
-    const sessionRef = doc(db, 'upload_sessions', sessionId);
+    const db = getFirestore();
+    const sessionRef = db.collection('upload_sessions').doc(sessionId);
 
-    // Update the status to 'ready_for_processing' to trigger the backend processor.
-    await updateDoc(sessionRef, { status: 'ready_for_processing' });
-
-    return NextResponse.json({
-      success: true,
-      message: `Processing initiated for session ${sessionId}. The backend is now handling the data.`,
+    // Update the session status to trigger the Cloud Function
+    await sessionRef.update({
+      status: 'ready_for_processing',
+      updatedAt: new Date().toISOString(),
     });
 
+    return NextResponse.json({ success: true, sessionId });
+
   } catch (error: any) {
-    console.error("API Error in /api/process-session:", error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error('API Route Error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+    

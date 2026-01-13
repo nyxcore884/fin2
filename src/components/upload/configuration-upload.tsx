@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,6 +7,7 @@ import { Sparkles, Wand, Loader, FileCheck, UploadCloud } from 'lucide-react';
 import { useUploadFile } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/hooks/use-auth';
 
 const fileTypes = [
   {
@@ -66,7 +66,8 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
     Object.fromEntries(fileTypes.map(f => [f.id, null]))
   );
 
-  const { uploadFile, createUploadSession, markSessionAsReady } = useUploadFile();
+  const { user } = useAuth();
+  const { uploadFile, createUploadSession, updateSessionWithFiles } = useUploadFile();
   const { toast } = useToast();
 
   const handleFileChange = (fileType: string, file: File | null) => {
@@ -74,13 +75,21 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
   };
 
   const handleProcessFiles = async () => {
-    const userId = "anonymous-user"; // Since auth is removed
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'You must be logged in to upload files.',
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     setProgress(0);
     const newSessionId = uuidv4();
 
-    const requiredFiles = fileTypes.filter(ft => ft.required).map(ft => ft.id);
-    const missingFiles = requiredFiles.filter(id => !selectedFiles[id]);
+    const requiredFileIds = fileTypes.filter(ft => ft.required).map(ft => ft.id);
+    const missingFiles = requiredFileIds.filter(id => !selectedFiles[id]);
 
     if (missingFiles.length > 0) {
         toast({
@@ -92,13 +101,12 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
         return;
     }
 
-
     const filesToUpload = Object.entries(selectedFiles)
       .map(([id, file]) => ({ id, file, label: fileTypes.find(ft => ft.id === id)?.label || id }))
       .filter(f => f.file);
 
     try {
-      await createUploadSession(userId, newSessionId);
+      await createUploadSession(user.uid, newSessionId);
 
       const uploadedFiles: Record<string, { name: string; path: string; uploadedAt: Date }> = {};
       
@@ -107,7 +115,7 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
         if (!file) continue;
 
         setActiveFile(label);
-        const storagePath = `user_uploads/${userId}/${newSessionId}/${id}/${file.name}`;
+        const storagePath = `user_uploads/${user.uid}/${newSessionId}/${id}/${file.name}`;
         
         await uploadFile(storagePath, file, (fileProgress) => {
             const overallProgress = ((index + (fileProgress / 100)) / filesToUpload.length) * 100;
@@ -122,17 +130,21 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
       }
       
       setActiveFile('Finalizing...');
-      await markSessionAsReady(newSessionId, {
+      await updateSessionWithFiles(newSessionId, {
         files: uploadedFiles,
         mode: 'configuration'
       });
       
-      // Directly trigger backend processing via API route
-      await fetch('/api/process-session', {
+      const response = await fetch('/api/process-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: newSessionId }),
       });
+
+      const result = await response.json();
+       if (!result.success) {
+          throw new Error(result.error || 'Failed to initiate processing.');
+      }
 
       onUploadComplete(newSessionId);
 
@@ -223,3 +235,5 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
     </div>
   );
 }
+
+    

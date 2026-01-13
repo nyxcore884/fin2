@@ -1,0 +1,30 @@
+name: Deploy to Firebase
+
+on:
+  push:
+    branches: [ main ]  # Trigger on push to main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest  # Use Linux runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4  # Clone repo
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # Match your Functions runtime
+
+      - name: Install dependencies
+        run: npm ci  # Or yarn install
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Run Tests
+        run: npm test  # Add your tests (e.g., Jest for ETL logic)
+
+      - name: Deploy Functions and Hosting
+        run: firebase deploy --only functions,hosting --token ${{ secrets.FIREBASE_TOKEN }} --project ${{ secrets.FIREBASE_PROJECT_ID }}
