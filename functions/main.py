@@ -38,13 +38,13 @@ def clean_numeric_column(series):
     return series
 
 
-@firestore_fn.on_document_updated("upload_sessions/{sessionId}")
+@firestore_fn.on_document_updated("uploadSessions/{sessionId}")
 def process_upload_session(event: firestore_fn.Event[firestore_fn.Change]) -> None:
     """
     Cloud Function triggered by a change to an UploadSession document in Firestore.
     """
     session_id = event.params["sessionId"]
-    session_ref = db.collection('upload_sessions').document(session_id)
+    session_ref = db.collection('uploadSessions').document(session_id)
     
     after_data = event.data.after.to_dict()
     before_data = event.data.before.to_dict() if event.data.before else {}
@@ -163,5 +163,3 @@ def process_upload_session(event: firestore_fn.Event[firestore_fn.Change]) -> No
             import shutil
             shutil.rmtree(temp_dir)
             logging.info(f"Cleaned up temporary directory: {temp_dir}")
-
-    

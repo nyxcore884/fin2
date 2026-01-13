@@ -75,24 +75,20 @@ function cleanAndConvertNumeric(value: any): number {
 
 /**
  * Downloads, parses, corrects, maps, and aggregates financial data for a session.
+ * This optimized version uses a single pass over the GL data to improve performance and memory usage.
  * @param files The file metadata from the session document.
  * @param bucket The Firebase Admin Storage bucket instance.
  * @returns An object with aggregated metrics and the detailed processed data.
  */
 export async function processUploadedFiles(files: SessionFiles, bucket: Bucket) {
-    // 1. Download and parse all files, including optional corrections
-    const filePromises: Promise<any[]>[] = [
+    // 1. Download and parse all files in parallel
+    const filePromises = [
         downloadFile(bucket, files.glEntries.path).then(buffer => parseFinancialFile(buffer, files.glEntries.name)),
         downloadFile(bucket, files.budgetHolderMapping.path).then(buffer => parseFinancialFile(buffer, files.budgetHolderMapping.name)),
         downloadFile(bucket, files.costItemMap.path).then(buffer => parseFinancialFile(buffer, files.costItemMap.name)),
         downloadFile(bucket, files.regionalMapping.path).then(buffer => parseFinancialFile(buffer, files.regionalMapping.name)),
+        files.corrections ? downloadFile(bucket, files.corrections.path).then(buffer => parseFinancialFile(buffer, files.corrections.name)) : Promise.resolve([]),
     ];
-
-    if (files.corrections) {
-        filePromises.push(downloadFile(bucket, files.corrections.path).then(buffer => parseFinancialFile(buffer, files.corrections.name)));
-    } else {
-        filePromises.push(Promise.resolve([])); // Add empty placeholder if no corrections
-    }
 
     const [
         glEntriesData,
@@ -102,68 +98,70 @@ export async function processUploadedFiles(files: SessionFiles, bucket: Bucket) 
         correctionsData,
     ] = await Promise.all(filePromises);
 
-    // 2. Create a lookup map for corrections for efficient access
-    const correctionsMap = new Map<string, any>();
-    correctionsData.forEach(correction => {
-        if (correction.Transaction_ID) {
-            correctionsMap.set(correction.Transaction_ID, correction);
-        }
-    });
+    // 2. Create efficient lookup Maps for all mapping files.
+    const correctionsMap = new Map<string, any>(correctionsData.map(c => [c.Transaction_ID, c]));
+    const costItemMap = new Map<string, string>(costItemMapData.map(row => [row.cost_item, row.budget_article]));
+    const budgetHolderMap = new Map<string, string>(budgetHolderMapData.map(row => [row.budget_article, row.budget_holder]));
+    const regionalMap = new Map<string, string>(regionalMapData.map(row => [row.structural_unit, row.region]));
 
-    // 3. Process GL Entries: Apply corrections, clean amounts, and filter invalid rows
-    const correctedGlEntries = glEntriesData.map(row => {
-        const correction = correctionsMap.get(row.Transaction_ID);
-        const mergedRow = correction ? { ...row, ...correction } : row;
-
-        return {
-            ...mergedRow,
-            Amount_Reporting_Curr: cleanAndConvertNumeric(mergedRow.Amount_Reporting_Curr),
-        };
-    }).filter(row => row.Amount_Reporting_Curr !== 0);
-
-    // 4. Create mapping objects for efficient lookups
-    const costItemMap = Object.fromEntries(costItemMapData.map(row => [row.cost_item, row.budget_article]));
-    const budgetHolderMap = Object.fromEntries(budgetHolderMapData.map(row => [row.budget_article, row.budget_holder]));
-    const regionalMap = Object.fromEntries(regionalMapData.map(row => [row.structural_unit, row.region]));
-
-    // 5. Apply all mappings to the corrected GL entries
-    const processedDf = correctedGlEntries.map(entry => {
-        const budget_article = costItemMap[entry.cost_item];
-        const budget_holder = budget_article ? budgetHolderMap[budget_article] : undefined;
-        const region = regionalMap[entry.structural_unit];
-        return {
-            ...entry,
-            budget_article,
-            budget_holder,
-            region,
-        };
-    });
-
-    // 6. Aggregate data for the preliminary income statement
-    const aggregation = processedDf.reduce((acc, row) => {
-        const amount = row.Amount_Reporting_Curr;
-        if (amount > 0) {
-            acc.totalRevenue += amount;
-        } else {
-            acc.totalCosts += Math.abs(amount);
-            if (row.budget_holder) {
-                acc.costsByHolder[row.budget_holder] = (acc.costsByHolder[row.budget_holder] || 0) + Math.abs(amount);
-            }
-            if (row.region) {
-                acc.costsByRegion[row.region] = (acc.costsByRegion[row.region] || 0) + Math.abs(amount);
-            }
-        }
-        return acc;
-    }, {
+    // 3. Process and aggregate in a single pass to optimize memory and performance.
+    const initialState = {
         totalRevenue: 0,
         totalCosts: 0,
         costsByHolder: {} as Record<string, number>,
         costsByRegion: {} as Record<string, number>,
-    });
+        processedDf: [] as any[],
+    };
 
-    // 7. Return aggregated metrics and the full processed dataframe
+    const finalState = glEntriesData.reduce((acc, entry) => {
+        // Apply correction if it exists
+        const correction = correctionsMap.get(entry.Transaction_ID);
+        const mergedEntry = correction ? { ...entry, ...correction } : entry;
+
+        // Clean amount and filter out zero-value rows
+        const amount = cleanAndConvertNumeric(mergedEntry.Amount_Reporting_Curr);
+        if (amount === 0) {
+            return acc; // Skip rows with no financial impact
+        }
+        mergedEntry.Amount_Reporting_Curr = amount;
+
+        // Apply mappings
+        const budget_article = costItemMap.get(mergedEntry.cost_item);
+        const budget_holder = budget_article ? budgetHolderMap.get(budget_article) : undefined;
+        const region = regionalMap.get(mergedEntry.structural_unit);
+        
+        const processedEntry = {
+            ...mergedEntry,
+            budget_article,
+            budget_holder,
+            region,
+        };
+
+        // Aggregate data
+        if (amount > 0) {
+            acc.totalRevenue += amount;
+        } else {
+            const absAmount = Math.abs(amount);
+            acc.totalCosts += absAmount;
+            if (budget_holder) {
+                acc.costsByHolder[budget_holder] = (acc.costsByHolder[budget_holder] || 0) + absAmount;
+            }
+            if (region) {
+                acc.costsByRegion[region] = (acc.costsByRegion[region] || 0) + absAmount;
+            }
+        }
+        
+        acc.processedDf.push(processedEntry);
+
+        return acc;
+    }, initialState);
+
+    // 4. Return aggregated metrics and the full processed dataframe
     return {
-        ...aggregation,
-        processedDf,
+        totalRevenue: finalState.totalRevenue,
+        totalCosts: finalState.totalCosts,
+        costsByHolder: finalState.costsByHolder,
+        costsByRegion: finalState.costsByRegion,
+        processedDf: finalState.processedDf,
     };
 }
