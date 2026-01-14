@@ -1,4 +1,3 @@
-tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { firebaseConfig } from '@/firebase/client';
 
 // Initialize Firebase
 let firebaseApp;
@@ -139,7 +138,7 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <Skeleton className="h-8 w-32"/> : <div className="text-2xl font-bold">`${aggregateMetrics.totalCosts.toLocaleString()}`}</div>}
+              {loading ? <Skeleton className="h-8 w-32"/> : <div className="text-2xl font-bold">{aggregateMetrics.totalCosts.toLocaleString()}</div>}
             </CardContent>
         </Card>
          <Card>
@@ -147,7 +146,7 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Retail Revenue</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <Skeleton className="h-8 w-32"/> : <div className="text-2xl font-bold">`${aggregateMetrics.retailRevenue.toLocaleString()}`}</div>}
+              {loading ? <Skeleton className="h-8 w-32"/> : <div className="text-2xl font-bold">{aggregateMetrics.retailRevenue.toLocaleString()}</div>}
             </CardContent>
         </Card>
          <Card>
@@ -155,7 +154,7 @@ export default function ReportsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Wholesale Revenue</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? <Skeleton className="h-8 w-32"/> : <div className="text-2xl font-bold">`${aggregateMetrics.wholesaleRevenue.toLocaleString()}`}</div>}
+              {loading ? <Skeleton className="h-8 w-32"/> : <div className="text-2xl font-bold">{aggregateMetrics.wholesaleRevenue.toLocaleString()}</div>}
             </CardContent>
         </Card>
       </div>

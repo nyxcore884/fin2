@@ -1,30 +1,46 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read/write their own profile document
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
-    // Allow create/update/read on upload sessions without auth
+    // Sessions can be read by anyone in the dev environment.
+    // This is not secure for production.
     match /upload_sessions/{sessionId} {
-      allow read, create, update: if true;
+      allow create: if true; // Allow anyone to create for dev
+      allow read: if true; // Allow anyone to read for dev
+      allow update: if true; // Allow anyone to update for dev
     }
 
-    // Allow all operations on budget_results without auth for now
+    // Results can be read by anyone in the dev environment.
+    // This is not secure for production.
     match /budget_results/{resultId} {
-      allow read, create, update, delete, list: if true;
+      allow read: if true;
+      allow create, update, delete, list: if false; // Deny all client writes
     }
 
     // Backups can only be created by Cloud Functions and read by admins
     match /backups/{backupId} {
-        allow create: if request.auth == null; // Allow from Cloud Functions
-        allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow create: if false; // Only allow from backend
+        allow read: if isAdmin();
     }
     
-    // Users can create their own feedback. Admins can read all feedback.
+    // Feedback can be created and read by anyone in the dev environment.
+    // This is not secure for production.
     match /feedback/{feedbackId} {
-      allow create, read, update: if true;
+      allow create: if true;
+      allow read: if true;
+      allow update: if true;
     }
   }
 }

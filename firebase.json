@@ -1,0 +1,36 @@
+{
+  "hosting": {
+    "public": "out",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "classifyRevenueFlow"
+      }
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "python-functions",
+      "runtime": "python312",
+      "trigger": {
+        "document": "uploadSessions/{sessionId}",
+        "event": "google.firestore.document.v1.written"
+      },
+      "entryPoint": "process_upload_session"
+    },
+    {
+      "source": "genkit",
+      "codebase": "nodejs-functions",
+      "runtime": "nodejs20",
+      "predeploy": [
+        "npm ci"
+      ]
+    }
+  ]
+}

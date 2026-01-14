@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import { useState } from 'react';
 import {
@@ -11,10 +11,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, Loader, Zap } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { provideAnomalySuggestions } from '@/ai/flows/provide-anomaly-suggestions';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/hooks/use-auth';
 
 type Anomaly = {
     id: string;
@@ -34,15 +34,16 @@ export function AnomalySuggestionDialog({ anomaly, sessionId }: AnomalySuggestio
   const [isLoading, setIsLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, anonymousId } = useAuth();
 
   async function handleGetSuggestions() {
-    if (suggestion) return; // Don't re-fetch if already loaded
+    if (suggestion) return;
 
     setIsLoading(true);
     try {
+      const userId = user?.uid || anonymousId || 'unknown_user';
       const result = await provideAnomalySuggestions({
-        // In a real app with auth, this would be the actual user ID
-        userId: 'anonymous-user', 
+        userId: userId, 
         message: `Provide potential reasons, suggestions, and recommended actions for this financial anomaly: "${anomaly.description}"`,
         sessionId: sessionId,
       });

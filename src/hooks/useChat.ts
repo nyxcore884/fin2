@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { provideAnomalySuggestions } from '@/ai/flows/provide-anomaly-suggestions';
 import { Message } from '@/types/chat';
+import { useAuth } from '@/hooks/use-auth';
 
 type UseChatProps = {
     currentSessionId?: string;
@@ -12,6 +13,7 @@ export function useChat({ currentSessionId }: UseChatProps = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
+  const { user, anonymousId } = useAuth();
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return;
@@ -22,9 +24,7 @@ export function useChat({ currentSessionId }: UseChatProps = {}) {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      // Since we removed auth, we use a placeholder user ID.
-      // In a real app with auth, you'd get the real user ID.
-      const userId = 'anonymous_user'; 
+      const userId = user?.uid || anonymousId || 'unknown_user';
 
       const result = await provideAnomalySuggestions({
         message: content,

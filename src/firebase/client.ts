@@ -1,27 +1,36 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { initializeFirestore, persistentLocalCache, getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { firebaseConfig } from '../firebase/config';
+'use client';
 
-let firebaseApp: FirebaseApp;
-let db: Firestore;
-let storage: FirebaseStorage;
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeFirestore, persistentLocalCache, memoryLocalCache, enableNetwork } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
-// Ensure Firebase app is initialized only once globally
-if (!getApps().length) {
-  firebaseApp = initializeApp(firebaseConfig);
-} else {
-  firebaseApp = getApp();
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyAQtEF3XZKZiAXcmqhofEXdSRB1IZTzMdo",
+  authDomain: "studio-9381016045-4d625.firebaseapp.com",
+  projectId: "studio-9381016045-4d625",
+  storageBucket: "studio-9381016045-4d625.firebasestorage.app",
+  messagingSenderId: "733431756980",
+  appId: "1:733431756980:web:70c581646d298c84ed7fe1"
+};
+
+// Initialize Firebase
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firestore with offline persistence
-// This should be done only once globally for the client-side application
-db = initializeFirestore(firebaseApp, {
-  localCache: persistentLocalCache(),
-  // tabManager: persistentMultipleTabManager() // Optional: if you want to sync cache across tabs
+// It will fall back to memory cache if the browser doesn't support indexedDB.
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({})
 });
 
-// Get the Firebase Storage instance
-storage = getStorage(firebaseApp);
+const storage = getStorage(app);
+const auth = getAuth(app);
 
-export { firebaseApp, db, storage };
+// It's a good practice to explicitly enable the network connection after initialization
+// if you want to ensure data is fetched on startup.
+enableNetwork(db).catch(err => {
+    console.error("Failed to enable Firestore network", err);
+});
+
+
+export { app, db, storage, auth, firebaseConfig };

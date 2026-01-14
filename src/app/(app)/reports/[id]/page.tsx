@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { notFound } from 'next/navigation';
@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, File as FileIcon, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 // Import db and storage from the centralized client-side Firebase initialization file
-import { db, storage } from '@/firebase/client'; // CORRECTED IMPORT PATH
+import { db, storage } from '@/firebase/client';
 
 type FileDetail = {
   name: string;
@@ -27,16 +27,17 @@ type UploadSession = {
   resultId: string;
 };
 
-export default function ReportDetailPage({ params }: { params: { id: string } }) {
+export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [session, setSession] = useState<UploadSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchReport() {
-      if (!params.id) return;
+      if (!id) return;
       try {
-        const sessionRef = doc(db, 'upload_sessions', params.id);
+        const sessionRef = doc(db, 'upload_sessions', id);
         const sessionSnap = await getDoc(sessionRef);
 
         if (!sessionSnap.exists()) {
@@ -53,7 +54,7 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
     }
 
     fetchReport();
-  }, [params.id]);
+  }, [id]);
 
   const handleDownload = async (filePath: string, fileName: string) => {
     try {

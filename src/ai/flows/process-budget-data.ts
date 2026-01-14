@@ -11,7 +11,7 @@ import { processUploadedFiles } from '@/ai/processors/dataProcessor';
 import { classifyRevenue } from './classify-revenue';
 import { detectAnomalies } from './detect-anomalies';
 import { Readable } from 'stream';
-import { getStorage }drom 'firebase-admin/storage';
+import { getStorage } from 'firebase-admin/storage';
 
 // Initialize Firebase Admin SDK if not already initialized
 // This gives the server backend privileged access to Firebase services.

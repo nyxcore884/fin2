@@ -8,20 +8,8 @@ import { CostByHolderChart } from "@/components/dashboard/cost-by-holder-chart";
 import { ReportsTable } from "@/components/dashboard/reports-table";
 import { AnomaliesList } from "@/components/dashboard/anomalies-list";
 import { Sparkles, Loader2 } from "lucide-react";
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { db } from '@/firebase/client';
 import { Skeleton } from '../ui/skeleton';
-
-
-// Initialize Firebase
-let firebaseApp;
-if (!getApps().length) {
-  firebaseApp = initializeApp(firebaseConfig);
-} else {
-  firebaseApp = getApp();
-}
-const db = getFirestore(firebaseApp);
 
 
 export function DashboardClient() {

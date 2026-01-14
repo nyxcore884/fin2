@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL, getStorage } from 'firebase/storage';
 import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { firebaseConfig } from '@/firebase/config';
+import { firebaseConfig } from '@/firebase/client';
 
 // Initialize Firebase
 let firebaseApp;

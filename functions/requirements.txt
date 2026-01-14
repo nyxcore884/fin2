@@ -1,7 +1,0 @@
-pandas
-firebase-admin
-functions-framework
-openpyxl
-xlrd
-google-cloud-storage
-requests
