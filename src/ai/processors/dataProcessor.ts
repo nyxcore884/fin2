@@ -35,7 +35,7 @@ async function downloadFile(bucket: Bucket, filePath: string): Promise<Buffer> {
   const file = bucket.file(filePath);
 
   // The SDK returns `Promise<[Buffer, any]>`; we cast to `[Buffer, any]`
-  const [buffer] = await file.download() as Promise<[Buffer, any]>;
+  const [buffer] = (await file.download()) as any as [Buffer, any];
 
   // No need to keep the destination file – we only need the in‑memory Buffer
   return buffer;
@@ -58,7 +58,7 @@ async function parseFinancialFile(buffer: Buffer, fileName: string): Promise<any
     const stream = Readable.from(buffer).pipe(
       csv({
         bom: true, // <- we know the option exists at runtime, just ignore the type
-      })
+      } as any)
     );
 
     stream.on('data', (data: any) => results.push(data));
@@ -75,7 +75,7 @@ async function parseFinancialFile(buffer: Buffer, fileName: string): Promise<any
     // wrap it in a Promise constructor.
     return new Promise<any[]>((resolve, reject) => {
       const results: any[] = [];
-      const stream = Readable.from(buffer).pipe(csv({ bom: true }));
+      const stream = Readable.from(buffer).pipe(csv({ bom: true } as any));
       stream.on('data', (data: any) => results.push(data));
       stream.on('end', () => resolve(results));
       stream.on('error', (e) => reject(e));
@@ -85,7 +85,7 @@ async function parseFinancialFile(buffer: Buffer, fileName: string): Promise<any
   // ------------------- XLSX / XLS -------------------
   if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as any);
 
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {

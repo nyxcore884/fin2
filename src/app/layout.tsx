@@ -1,16 +1,11 @@
-'use client';
 
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
-import dynamic from 'next/dynamic';
+import ClientLayout from '@/components/ClientLayout';
 
-// Dynamic import for client-only component is now safe
-const FloatingAIChat = dynamic(() => import('@/components/FloatingAIChat'), {
-  ssr: false,
-});
 
 // Metadata is still correctly processed by Next.js at build time
 export const metadata: Metadata = {
@@ -41,10 +36,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            <ClientLayout>
+              {children}
+            </ClientLayout>
           </AuthProvider>
           <Toaster />
-          <FloatingAIChat />
         </ThemeProvider>
       </body>
     </html>
