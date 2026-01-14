@@ -14,7 +14,7 @@ export const useUploadFile = () => {
     const firestore = getFirestore();
 
     const createUploadSession = async (userId: string, sessionId: string) => {
-        const sessionRef = doc(firestore, 'uploadSessions', sessionId);
+        const sessionRef = doc(firestore, 'upload_sessions', sessionId);
         await setDoc(sessionRef, {
             userId,
             sessionId,
@@ -27,7 +27,7 @@ export const useUploadFile = () => {
     
     // This function is now simplified, just for updating with file info before triggering backend
     const markSessionAsReady = async (sessionId: string, data: Record<string, any>) => {
-        const sessionRef = doc(firestore, 'uploadSessions', sessionId);
+        const sessionRef = doc(firestore, 'upload_sessions', sessionId);
         await updateDoc(sessionRef, {
             ...data,
             status: 'ready_for_processing',

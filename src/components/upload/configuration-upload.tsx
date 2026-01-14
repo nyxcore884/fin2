@@ -67,7 +67,7 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
   );
 
   const { user } = useAuth();
-  const { uploadFile, createUploadSession, updateSessionWithFiles } = useUploadFile();
+  const { uploadFile, createUploadSession, markSessionAsReady } = useUploadFile();
   const { toast } = useToast();
 
   const handleFileChange = (fileType: string, file: File | null) => {
@@ -130,11 +130,12 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
       }
       
       setActiveFile('Finalizing...');
-      await updateSessionWithFiles(newSessionId, {
+      await markSessionAsReady(newSessionId, {
         files: uploadedFiles,
         mode: 'configuration'
       });
-      
+
+      // Call API route to trigger backend processing
       const response = await fetch('/api/process-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,8 +143,8 @@ export function ConfigurationUpload({ onUploadComplete }: ConfigurationUploadPro
       });
 
       const result = await response.json();
-       if (!result.success) {
-          throw new Error(result.error || 'Failed to initiate processing.');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to initiate processing.');
       }
 
       onUploadComplete(newSessionId);

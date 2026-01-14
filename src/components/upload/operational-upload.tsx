@@ -22,7 +22,7 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
   const [analysisRequest, setAnalysisRequest] = useState('');
   
   const { user } = useAuth();
-  const { uploadFile, createUploadSession, updateSessionWithFiles } = useUploadFile();
+  const { uploadFile, createUploadSession, markSessionAsReady } = useUploadFile();
   const { toast } = useToast();
 
   const handleUpload = async () => {
@@ -62,7 +62,7 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
         }
       };
 
-      await updateSessionWithFiles(sessionId, {
+      await markSessionAsReady(sessionId, {
         files: uploadedFiles,
         analysisRequest: analysisRequest.trim(),
         mode: 'operational'
@@ -77,7 +77,7 @@ export function OperationalUpload({ onUploadComplete }: OperationalUploadProps) 
 
       const result = await response.json();
       if (!result.success) {
-          throw new Error(result.error || 'Failed to initiate processing.');
+        throw new Error(result.error || 'Failed to initiate processing.');
       }
 
       onUploadComplete(sessionId);

@@ -47,8 +47,11 @@ export async function processBudgetData(sessionId: string): Promise<void> {
     const sessionData = sessionDoc.data()!;
 
     // 2. Process the uploaded files from Cloud Storage
-    const { processedDf, revenueDf, costsDf } = await processUploadedFiles(sessionData.files, storage.bucket());
+    const { processedDf } = await processUploadedFiles(sessionData.files, storage.bucket());
     
+    const revenueDf = processedDf.filter((row: any) => row.Amount_Reporting_Curr > 0);
+    const costsDf = processedDf.filter((row: any) => row.Amount_Reporting_Curr < 0);
+
     // 3. AI-Powered Revenue Classification
     let retail_revenue = 0;
     let wholesale_revenue = 0;

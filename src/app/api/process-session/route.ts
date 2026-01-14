@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { processBudgetData } from '@/ai/flows/process-budget-data';
 
 // Initialize Firebase Admin SDK if not already done.
 // This is safe to run multiple times.
@@ -16,8 +17,7 @@ if (!admin.apps.length) {
 }
 
 /**
- * This API route triggers the backend processing by updating the status of a session document.
- * The actual processing is handled by a Firestore-triggered Cloud Function.
+ * This API route triggers the backend processing.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,15 +28,20 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getFirestore();
-    const sessionRef = db.collection('uploadSessions').doc(sessionId);
+    // Use correct collection name 'upload_sessions'
+    const sessionRef = db.collection('upload_sessions').doc(sessionId);
 
-    // Update the session status to trigger the Cloud Function
+    // Update the session status
     await sessionRef.update({
       status: 'ready_for_processing',
       updatedAt: new Date(),
     });
 
-    console.log(`Session ${sessionId} marked as ready_for_processing.`);
+    console.log(`Session ${sessionId} marked as ready_for_processing. Triggering backend processing...`);
+
+    // Trigger the processing logic directly
+    await processBudgetData(sessionId);
+
     return NextResponse.json({ success: true, sessionId });
 
   } catch (error: any) {
