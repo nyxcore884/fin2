@@ -19,13 +19,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     }
   }, [user, loading, router, pathname]);
 
-  if (loading || (!user && pathname !== '/login')) {
-    // You can add a loading spinner here
-    return <div>Loading...</div>;
+  if (pathname === '/login') {
+    return <>{children}</>;
   }
 
-  if (!user) {
-    return <>{children}</>; // Render login page
+  if (loading || !user) {
+    // You can add a loading spinner here
+    return <div>Loading...</div>;
   }
 
   return (

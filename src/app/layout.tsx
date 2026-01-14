@@ -3,7 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import FloatingAIChat from "@/components/FloatingAIChat";
-import { AuthProvider } from '@/hooks/use-auth';
+import dynamic from 'next/dynamic';
+
+const AuthProvider = dynamic(() => import('@/hooks/use-auth').then(mod => mod.AuthProvider), { ssr: false });
 
 export const metadata: Metadata = {
   title: "Budget Insights",
