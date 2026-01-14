@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
     "https://6000-firebase-studio-1768146889555.cluster-2nmnojxdmnfh2vwda4kd7uoumu.cloudworkstations.dev",
     "https://9000-firebase-studio-1768146889555.cluster-2nmnojxdmnfh2vwda4kd7uoumu.cloudworkstations.dev"
   ],
-  experimental: {},
   images: {
     remotePatterns: [
       {
